@@ -1,0 +1,36 @@
+[Unit]
+Description=TechTemp sensor client
+Wants=network-online.target
+After=network-online.target
+# si tu utilises des ressources spécifiques (i2c, gpio) tu peux ajouter Requires=...
+
+[Service]
+Type=simple
+User=pi 
+Group=i2c           
+WorkingDirectory=/home/pi/Documents/techtemp
+ExecStart=/home/pi/Documents/techtemp/techtemp
+# Si tu veux charger variables depuis un fichier :
+# EnvironmentFile=/etc/default/techtemp
+
+Restart=on-failure      
+RestartSec=5s
+# Restart=always est OK si tu veux redémarrage tout le temps ; on-failure est plus sûr
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+Environment=TZ=Europe/Brussels
+
+# Sécurité / sandboxing (ajuste si ton binaire a besoin d'accès matériel)
+NoNewPrivileges=yes
+ProtectSystem=full      
+ProtectHome=no        
+PrivateTmp=yes
+
+# Permissions (si besoin d'accéder à /dev/i2c-* ou /dev/gpiochip*)
+# AddCapabilities etc. nécéssaires si tu dois manipuler bas niveau
+# AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

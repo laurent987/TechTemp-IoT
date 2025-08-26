@@ -1,0 +1,71 @@
+# Autoriser '>' au lieu d'un TAB pour éviter l'erreur "missing separator"
+.RECIPEPREFIX := >
+
+APP_NAME := techtemp
+VERSION  := 1.0.0
+
+CC      := gcc
+CSTD    := -std=c11
+WARN    := -Wall -Wextra -Wpedantic
+OPT     := -O3 -DNDEBUG
+
+SRC := $(wildcard ./*.c)
+OBJ := $(SRC:.c=.o)
+DEP := $(OBJ:.o=.d)
+
+# Détecte le triplet multiarch (arm-linux-gnueabihf, aarch64-linux-gnu, …)
+MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null)
+
+# Includes de ton projet + includes système
+INC_DIRS := -I.
+SYS_INC  := -I/usr/include
+# Si tu as installé Paho sous /usr/local/include, décommente la ligne suivante
+#SYS_INC  += -I/usr/local/include
+
+# Choisis la variante synchrone (3c) ou asynchrone (3a)
+PAHO_LIB := -lpaho-mqtt3c
+#PAHO_LIB := -lpaho-mqtt3a
+
+# Libs usuelles
+LDLIBS   := $(PAHO_LIB) -lpthread
+LDFLAGS  :=
+
+CFLAGS   := $(CSTD) $(WARN) $(OPT) $(INC_DIRS) $(SYS_INC) -D_POSIX_C_SOURCE=200809L
+
+.PHONY: all clean enhanced
+all: $(APP_NAME)
+
+# Version enhanced avec capture à la demande
+enhanced: techtemp_enhanced
+
+techtemp_enhanced: client_enhanced.o $(filter-out client.o client_enhanced.o, $(OBJ))
+> $(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+$(APP_NAME): $(OBJ)
+> $(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+%.o: %.c
+> $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+clean:
+> $(RM) $(OBJ) $(DEP) $(APP_NAME) techtemp_enhanced client_enhanced.o
+
+-include $(DEP)
+
+
+# Déploiement vers Raspberry Pi via ./deploy.sh
+DEPLOY_SCRIPT := ./deploy.sh
+DEPLOY_USER ?= pi
+DEPLOY_HOST ?= 192.168.0.202
+DEPLOY_REMOTE_PATH ?= /home/$(DEPLOY_USER)/Documents/techtemp/
+DEPLOY_RUN_MAKE ?= 0   # 1 pour exécuter make à distance
+
+.PHONY: deploy
+deploy:
+ifeq ($(DEPLOY_RUN_MAKE),1)
+>	@echo "Déploiement vers $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_REMOTE_PATH) (et exécution de make distant)"
+>	$(DEPLOY_SCRIPT) --run-remote-make $(DEPLOY_USER) $(DEPLOY_HOST) $(DEPLOY_REMOTE_PATH)
+else
+>	@echo "Déploiement vers $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_REMOTE_PATH)"
+>	$(DEPLOY_SCRIPT) $(DEPLOY_USER) $(DEPLOY_HOST) $(DEPLOY_REMOTE_PATH)
+endif

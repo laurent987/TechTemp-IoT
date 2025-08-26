@@ -1,0 +1,53 @@
+# Fichiers compilés
+*.o
+*.d
+server/server
+server/techtemp
+client/techtemp
+client/techtemp_enhanced
+
+# Logs
+*.log
+server/*.log
+server/Heverlee/
+
+# Bases de données locales
+*.db
+server/*.db
+server/Heverlee/*.db
+
+# Fichiers temporaires
+*.tmp
+*.temp
+*~
+.DS_Store
+
+# Node modules (React)
+web/node_modules/
+web/build/
+web/.env.local
+web/.env.development.local
+web/.env.test.local
+web/.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Fichiers de configuration sensibles
+*.key
+*.pem
+.env
+
+# Certificats et clés
+ssl/
+certs/
+
+# Backups
+*.backup
+*.bak
+
+# Fichiers système
+Thumbs.db

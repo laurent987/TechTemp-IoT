@@ -1,0 +1,130 @@
+Bien sûr ! Voici le détail des **commandes** à exécuter étape par étape pour installer **Mosquitto**, vérifier l’IP du Pi, préparer ton serveur, et communiquer avec le broker MQTT.
+
+---
+
+### **1. Installer Mosquitto (Broker MQTT)**
+Sur ton Raspberry Pi (**Raspbian/Debian**):
+
+```bash
+sudo apt update
+sudo apt install mosquitto mosquitto-clients
+sudo systemctl enable mosquitto
+sudo systemctl start mosquitto
+```
+
+> **mosquitto** : le broker  
+> **mosquitto-clients** : outils de test (`mosquitto_pub` et `mosquitto_sub`)
+
+---
+
+### **2. Vérifier que Mosquitto tourne**
+
+```bash
+sudo systemctl status mosquitto
+```
+
+---
+
+### **3. Tester le Broker Localement**
+Dans deux **terminaux différents** en SSH sur ton Pi :
+
+- **Terminal 1** - abonne-toi au topic `test` :
+  ```bash
+  mosquitto_sub -h localhost -t test
+  ```
+
+- **Terminal 2** - publie un message sur le topic `test` :
+  ```bash
+  mosquitto_pub -h localhost -t test -m "hello"
+  ```
+
+Tu dois voir “hello” apparaître dans le Terminal 1.
+
+---
+
+### **4. Vérifier l’adresse IP de ton Raspberry Pi**
+
+```bash
+hostname -I
+```
+> Note l’adresse (exemple : `192.168.1.42`).
+
+---
+
+### **5. Modifier la configuration des clients/serveurs**
+
+Dans ton code ou fichier de config, remplace `localhost` par **l’IP de ton Pi** comme adresse du broker MQTT.
+```c
+const char* broker_ip = "192.168.1.42";
+```
+
+---
+
+### **6. Préparer et Compiler ton projet C sur le Pi**
+
+**a) Copier ton code vers le Pi**
+- **Depuis ton PC (**remplacer `user` et `DIR`)**:
+  ```bash
+  scp -r /chemin/vers/ton/projet user@192.168.1.42:/home/user/tonprojet
+  ```
+
+**b) Installer les dépendances**
+Pour C et MQTT (par exemple : `libmosquitto-dev`):
+```bash
+sudo apt install build-essential libmosquitto-dev
+```
+
+**c) Compiler ton projet**
+- **Exemple d’une source unique**:
+  ```bash
+  gcc -o monserveur main.c -lmosquitto
+  ```
+
+**d) Lancer ton serveur**
+```bash
+./monserveur
+```
+
+---
+
+### **7. Vérifier/Ouvrir le port 1883**
+Par défaut, sans firewall, c’est ouvert.  
+Avec UFW activé, ouvre le port :
+```bash
+sudo ufw allow 1883
+```
+---
+### **8. (Optionnel) Sécuriser Mosquitto**
+- [Documentation officielle](https://mosquitto.org/documentation/authentication-methods/)
+
+Pour accès local **simple**, ce n’est pas obligatoire!
+
+---
+
+**RÉSUMÉ DES COMMANDES CLÉS**
+
+```bash
+# Installer Mosquitto et clients
+sudo apt update
+sudo apt install mosquitto mosquitto-clients
+
+# Tester en local
+mosquitto_sub -h localhost -t test
+mosquitto_pub -h localhost -t test -m "hello"
+
+# Vérifier l’IP du Pi
+hostname -I
+
+# Installer la lib MQTT pour C
+sudo apt install libmosquitto-dev
+
+# Compiler (exemple)
+gcc -o monserveur main.c -lmosquitto
+
+# Lancer ton serveur
+./monserveur
+```
+
+---
+
+**Si tu veux un script Bash qui fait les étapes d’installation : je peux t’en générer un. Dis-moi tes besoins !**
