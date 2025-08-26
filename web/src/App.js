@@ -70,8 +70,8 @@ function App() {
               selectedRooms={selectedRoomNames}
               loading={loading}
               error={error}
-              startTimestamp={startTimestamp}
-              endTimestamp={endTimestamp}
+              startDate={startTimestamp}
+              endDate={endTimestamp}
             />
           </TabPanel>
 

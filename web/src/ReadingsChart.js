@@ -121,26 +121,57 @@ const makeHourlyTicks = (data) => {
 };
 
 // Composant principal
-export default function ReadingsChart({ data, loading, error, selectedRooms, startDate }) {
+export default function ReadingsChart({ data, loading, error, selectedRooms, startDate, endDate }) {
   const containerPx = useBreakpointValue({ base: 2, md: 8 });
   const [showWeather, setShowWeather] = React.useState(true);
   
-  // Hook pour les données météo
-  const { weatherData, loading: weatherLoading, error: weatherError, fetchWeatherData } = useWeatherData();
+  // Calculer les dates pour la météo
+  const weatherStartDate = React.useMemo(() => {
+    if (startDate) {
+      return new Date(startDate);
+    }
+    return null;
+  }, [startDate]);
+
+  const weatherEndDate = React.useMemo(() => {
+    if (endDate) {
+      return new Date(endDate);
+    } else if (startDate) {
+      // Si seulement startDate est fournie, utiliser le jour suivant
+      const nextDay = new Date(startDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      return nextDay;
+    }
+    return null;
+  }, [startDate, endDate]);
   
-  // Charger les données météo au montage du composant
-  React.useEffect(() => {
-    fetchWeatherData();
-  }, []);
+  // Hook pour les données météo avec les dates
+  const { weatherData, loading: weatherLoading, error: weatherError, fetchWeatherData } = useWeatherData(weatherStartDate, weatherEndDate);
   
-  // Actualiser les données météo toutes les 30 minutes
+  // Charger les données météo au montage du composant et quand les dates changent
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      fetchWeatherData();
-    }, 30 * 60 * 1000); // 30 minutes
-    
-    return () => clearInterval(interval);
-  }, [fetchWeatherData]);
+    if (showWeather) {
+      fetchWeatherData(weatherStartDate, weatherEndDate);
+    }
+  }, [showWeather, weatherStartDate, weatherEndDate, fetchWeatherData]);
+  
+  // Actualiser les données météo toutes les 30 minutes (seulement si dates actuelles)
+  React.useEffect(() => {
+    const isCurrentDate = () => {
+      if (!startDate) return true;
+      const today = new Date();
+      const selected = new Date(startDate);
+      return selected.toDateString() === today.toDateString();
+    };
+
+    if (showWeather && isCurrentDate()) {
+      const interval = setInterval(() => {
+        fetchWeatherData(weatherStartDate, weatherEndDate);
+      }, 30 * 60 * 1000); // 30 minutes
+      
+      return () => clearInterval(interval);
+    }
+  }, [showWeather, startDate, weatherStartDate, weatherEndDate, fetchWeatherData]);
 
   const chartData = pivotReadings(data, selectedRooms, showWeather, weatherData);
   const allRooms = showWeather ? [...selectedRooms, 'Extérieur (Belgique)'] : selectedRooms;
