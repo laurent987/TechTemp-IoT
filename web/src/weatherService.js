@@ -78,33 +78,33 @@ export async function getWeatherForecast() {
 export async function getBelgianWeatherFromOpenMeteo(startDate = null, endDate = null) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   // Si pas de dates spécifiées, utiliser les dernières 24h
   const defaultStart = new Date(today.getTime() - 24 * 60 * 60 * 1000);
   const defaultEnd = today;
-  
+
   const effectiveStart = startDate || defaultStart;
   const effectiveEnd = endDate || defaultEnd;
-  
+
   try {
     console.log('Récupération météo pour:', {
       startDate: effectiveStart.toISOString(),
       endDate: effectiveEnd.toISOString()
     });
-    
+
     // Calculer les jours passés et futurs par rapport à aujourd'hui
     const diffStartDays = Math.floor((today.getTime() - effectiveStart.getTime()) / (24 * 60 * 60 * 1000));
     const diffEndDays = Math.floor((effectiveEnd.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-    
+
     const pastDays = Math.max(0, diffStartDays);
     const forecastDays = Math.max(1, Math.min(7, diffEndDays + 1)); // API limite à 7 jours
-    
+
     // Vérifier si on demande des données trop anciennes (>92 jours)
     if (pastDays > 92) {
       console.warn('Date trop ancienne pour Open-Meteo, génération de données simulées');
       return generateSimulatedWeatherData(effectiveStart, effectiveEnd);
     }
-    
+
     // API Open-Meteo - gratuite, pas de clé requise
     const params = {
       latitude: 50.8503,
@@ -112,7 +112,7 @@ export async function getBelgianWeatherFromOpenMeteo(startDate = null, endDate =
       hourly: 'temperature_2m,relative_humidity_2m',
       timezone: 'Europe/Brussels',
     };
-    
+
     // Ajouter les paramètres de date seulement si nécessaire
     if (pastDays > 0) {
       params.past_days = Math.min(92, pastDays);
@@ -120,13 +120,13 @@ export async function getBelgianWeatherFromOpenMeteo(startDate = null, endDate =
     if (diffEndDays >= 0) {
       params.forecast_days = forecastDays;
     }
-    
+
     console.log('Paramètres API Open-Meteo:', params);
-    
+
     const response = await axios.get('https://api.open-meteo.com/v1/forecast', { params });
 
     const hourly = response.data.hourly;
-    
+
     // Données horaires filtrées pour la plage demandée
     const hourlyData = hourly.time
       .map((time, index) => ({
@@ -154,7 +154,7 @@ export async function getBelgianWeatherFromOpenMeteo(startDate = null, endDate =
     };
   } catch (error) {
     console.error('Erreur lors de la récupération de la météo Open-Meteo:', error);
-    
+
     // En cas d'erreur, générer des données simulées
     console.warn('Génération de données météo simulées');
     return generateSimulatedWeatherData(effectiveStart, effectiveEnd);
@@ -168,25 +168,25 @@ function generateSimulatedWeatherData(startDate, endDate) {
   const hourlyData = [];
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
+
   // Générer des données toutes les heures
   for (let time = new Date(start); time <= end; time.setHours(time.getHours() + 1)) {
     // Simulation basée sur des patterns météo typiques belges
     const hour = time.getHours();
     const dayOfYear = time.getMonth() * 30 + time.getDate();
-    
+
     // Température de base selon la saison (approximation pour la Belgique)
     let baseTemp = 15 + 10 * Math.sin((dayOfYear - 80) * 2 * Math.PI / 365);
-    
+
     // Variation diurne (plus chaud l'après-midi)
     const dailyVariation = 5 * Math.sin((hour - 6) * Math.PI / 12);
-    
+
     // Ajout de variation aléatoire
     const randomVariation = (Math.random() - 0.5) * 4;
-    
+
     const temperature = Math.round((baseTemp + dailyVariation + randomVariation) * 10) / 10;
     const humidity = Math.round(50 + 30 * Math.sin(hour * Math.PI / 24) + (Math.random() - 0.5) * 20);
-    
+
     hourlyData.push({
       temperature,
       humidity: Math.max(20, Math.min(90, humidity)),
@@ -194,7 +194,7 @@ function generateSimulatedWeatherData(startDate, endDate) {
       location: 'Belgique (Extérieur - Simulé)'
     });
   }
-  
+
   return {
     current: {
       temperature: hourlyData[hourlyData.length - 1]?.temperature || 20,
@@ -246,9 +246,9 @@ export function useWeatherData(startDate = null, endDate = null) {
     try {
       const effectiveStart = customStartDate || startDate;
       const effectiveEnd = customEndDate || endDate;
-      
+
       const data = await getBelgianWeatherFromOpenMeteo(effectiveStart, effectiveEnd);
-      
+
       // Transformer les données pour qu'elles soient compatibles avec le graphique
       const formattedData = data.hourly.map(item => ({
         timestamp: item.timestamp,

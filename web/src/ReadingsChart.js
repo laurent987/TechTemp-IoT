@@ -32,7 +32,7 @@ import {
 function pivotReadings(rawReadings, selectedRooms, includeWeather = false, weatherData = []) {
   if (!Array.isArray(rawReadings)) return [];
   const grouped = {};
-  
+
   // Ajouter les données des capteurs intérieurs
   rawReadings.forEach((item) => {
     let ts;
@@ -57,7 +57,7 @@ function pivotReadings(rawReadings, selectedRooms, includeWeather = false, weath
   }
 
   const all = Object.values(grouped).sort((a, b) => a.timestamp - b.timestamp);
-  
+
   // S'assurer que toutes les pièces sélectionnées ont une valeur (null si pas de données)
   const allRooms = includeWeather ? [...selectedRooms, 'Extérieur (Belgique)'] : selectedRooms;
   all.forEach(point => {
@@ -65,7 +65,7 @@ function pivotReadings(rawReadings, selectedRooms, includeWeather = false, weath
       if (point[room] === undefined) point[room] = null;
     });
   });
-  
+
   return all;
 }
 
@@ -124,7 +124,7 @@ const makeHourlyTicks = (data) => {
 export default function ReadingsChart({ data, loading, error, selectedRooms, startDate, endDate }) {
   const containerPx = useBreakpointValue({ base: 2, md: 8 });
   const [showWeather, setShowWeather] = React.useState(true);
-  
+
   // Calculer les dates pour la météo
   const weatherStartDate = React.useMemo(() => {
     if (startDate) {
@@ -144,17 +144,17 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
     }
     return null;
   }, [startDate, endDate]);
-  
+
   // Hook pour les données météo avec les dates
   const { weatherData, loading: weatherLoading, error: weatherError, fetchWeatherData } = useWeatherData(weatherStartDate, weatherEndDate);
-  
+
   // Charger les données météo au montage du composant et quand les dates changent
   React.useEffect(() => {
     if (showWeather) {
       fetchWeatherData(weatherStartDate, weatherEndDate);
     }
   }, [showWeather, weatherStartDate, weatherEndDate, fetchWeatherData]);
-  
+
   // Actualiser les données météo toutes les 30 minutes (seulement si dates actuelles)
   React.useEffect(() => {
     const isCurrentDate = () => {
@@ -168,7 +168,7 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
       const interval = setInterval(() => {
         fetchWeatherData(weatherStartDate, weatherEndDate);
       }, 30 * 60 * 1000); // 30 minutes
-      
+
       return () => clearInterval(interval);
     }
   }, [showWeather, startDate, weatherStartDate, weatherEndDate, fetchWeatherData]);
@@ -197,7 +197,7 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
                   Suivi graphique de la température dans chaque pièce.
                 </Text>
               </Box>
-              
+
               <FormControl display="flex" alignItems="center" width="auto">
                 <FormLabel htmlFor="weather-toggle" mb="0" fontSize="sm">
                   Temp. extérieure
@@ -294,9 +294,9 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
               >
                 <Spinner size="lg" color="blue.500" />
                 <Text ml={3}>
-                  {loading && weatherLoading ? 'Chargement des données...' 
-                   : loading ? 'Chargement capteurs...'
-                   : 'Chargement météo...'}
+                  {loading && weatherLoading ? 'Chargement des données...'
+                    : loading ? 'Chargement capteurs...'
+                      : 'Chargement météo...'}
                 </Text>
               </Flex>
             )}
