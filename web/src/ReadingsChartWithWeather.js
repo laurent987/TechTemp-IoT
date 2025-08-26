@@ -32,7 +32,7 @@ import {
 function pivotReadings(rawReadings, selectedRooms, includeWeather = false, weatherData = []) {
   if (!Array.isArray(rawReadings)) return [];
   const grouped = {};
-  
+
   // Ajouter les données des capteurs intérieurs
   rawReadings.forEach((item) => {
     let ts;
@@ -57,7 +57,7 @@ function pivotReadings(rawReadings, selectedRooms, includeWeather = false, weath
   }
 
   const all = Object.values(grouped).sort((a, b) => a.timestamp - b.timestamp);
-  
+
   // S'assurer que toutes les pièces sélectionnées ont une valeur (null si pas de données)
   const allRooms = includeWeather ? [...selectedRooms, 'Extérieur (Belgique)'] : selectedRooms;
   all.forEach(point => {
@@ -65,7 +65,7 @@ function pivotReadings(rawReadings, selectedRooms, includeWeather = false, weath
       if (point[room] === undefined) point[room] = null;
     });
   });
-  
+
   return all;
 }
 
@@ -124,21 +124,21 @@ const makeHourlyTicks = (data) => {
 export default function ReadingsChart({ data, loading, error, selectedRooms, startDate }) {
   const containerPx = useBreakpointValue({ base: 2, md: 8 });
   const [showWeather, setShowWeather] = React.useState(true);
-  
+
   // Hook pour les données météo
   const { weatherData, loading: weatherLoading, error: weatherError, fetchWeatherData } = useWeatherData();
-  
+
   // Charger les données météo au montage du composant
   React.useEffect(() => {
     fetchWeatherData();
   }, []);
-  
+
   // Actualiser les données météo toutes les 30 minutes
   React.useEffect(() => {
     const interval = setInterval(() => {
       fetchWeatherData();
     }, 30 * 60 * 1000); // 30 minutes
-    
+
     return () => clearInterval(interval);
   }, [fetchWeatherData]);
 
@@ -166,7 +166,7 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
                   Suivi graphique de la température dans chaque pièce.
                 </Text>
               </Box>
-              
+
               <FormControl display="flex" alignItems="center" width="auto">
                 <FormLabel htmlFor="weather-toggle" mb="0" fontSize="sm">
                   Temp. extérieure
@@ -263,9 +263,9 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
               >
                 <Spinner size="lg" color="blue.500" />
                 <Text ml={3}>
-                  {loading && weatherLoading ? 'Chargement des données...' 
-                   : loading ? 'Chargement capteurs...'
-                   : 'Chargement météo...'}
+                  {loading && weatherLoading ? 'Chargement des données...'
+                    : loading ? 'Chargement capteurs...'
+                      : 'Chargement météo...'}
                 </Text>
               </Flex>
             )}
