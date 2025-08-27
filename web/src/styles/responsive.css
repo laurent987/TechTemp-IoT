@@ -1,0 +1,388 @@
+/* ===================================
+   TechTemp PWA - Responsive Styles
+   =================================== */
+
+/* Variables CSS pour breakpoints consistants */
+:root {
+  --breakpoint-xs: 360px;
+  --breakpoint-sm: 600px;
+  --breakpoint-md: 900px;
+  --breakpoint-lg: 1200px;
+  --breakpoint-xl: 1400px;
+  
+  /* Espacement fluide */
+  --spacing-xs: clamp(0.5rem, 2vw, 1rem);
+  --spacing-sm: clamp(1rem, 3vw, 1.5rem);
+  --spacing-md: clamp(1.5rem, 4vw, 2rem);
+  --spacing-lg: clamp(2rem, 5vw, 3rem);
+  
+  /* Typographie fluide */
+  --font-size-xs: clamp(0.75rem, 2.5vw, 0.875rem);
+  --font-size-sm: clamp(0.875rem, 2.8vw, 1rem);
+  --font-size-base: clamp(1rem, 3vw, 1.125rem);
+  --font-size-lg: clamp(1.125rem, 3.5vw, 1.25rem);
+  --font-size-xl: clamp(1.25rem, 4vw, 1.5rem);
+  --font-size-2xl: clamp(1.5rem, 5vw, 2rem);
+  
+  /* Safe areas pour iOS */
+  --safe-area-inset-top: env(safe-area-inset-top, 0);
+  --safe-area-inset-right: env(safe-area-inset-right, 0);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0);
+  --safe-area-inset-left: env(safe-area-inset-left, 0);
+}
+
+/* Reset et base */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* Améliore le scroll sur mobile */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+body {
+  /* Évite le zoom sur focus des inputs iOS */
+  -webkit-text-size-adjust: 100%;
+  
+  /* Safe areas iOS */
+  padding-top: var(--safe-area-inset-top);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+/* ===================================
+   Layout Responsive Principal
+   =================================== */
+
+/* Container principal adaptatif */
+.app-container {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height */
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+}
+
+/* Sidebar responsive */
+.sidebar {
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 280px;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1000;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  }
+  
+  .sidebar.open {
+    left: 0;
+  }
+}
+
+/* Zone de contenu principal */
+.main-content {
+  flex: 1;
+  min-width: 0; /* Évite le débordement */
+  padding: var(--spacing-sm);
+}
+
+@media (min-width: 769px) {
+  .main-content {
+    margin-left: 0;
+    padding: var(--spacing-md);
+  }
+}
+
+/* ===================================
+   Composants Responsifs
+   =================================== */
+
+/* Graphiques responsifs */
+.chart-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+  .chart-container {
+    /* Graphique scrollable horizontalement sur mobile */
+    min-width: 600px;
+  }
+}
+
+/* Tabs responsive */
+.tabs-container {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .tabs-list {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .tabs-list::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .tab-item {
+    flex-shrink: 0;
+    font-size: var(--font-size-sm);
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* Cartes adaptatives */
+.card-grid {
+  display: grid;
+  gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+@media (max-width: 480px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xs);
+  }
+}
+
+/* ===================================
+   Éléments Interactifs Mobiles
+   =================================== */
+
+/* Boutons avec hit-target de 44px minimum */
+.btn-mobile {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.75rem 1rem;
+  font-size: var(--font-size-base);
+}
+
+@media (max-width: 600px) {
+  .btn-mobile {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Inputs tactiles */
+.input-mobile {
+  min-height: 44px;
+  font-size: 16px; /* Évite le zoom iOS */
+  padding: 0.75rem;
+}
+
+/* Switches et contrôles */
+.control-mobile {
+  min-height: 44px;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+/* ===================================
+   PWA Spécifique
+   =================================== */
+
+/* Barre de statut iOS en standalone */
+@media (display-mode: standalone) {
+  .pwa-header {
+    padding-top: calc(var(--safe-area-inset-top) + 1rem);
+  }
+  
+  .pwa-content {
+    padding-bottom: calc(var(--safe-area-inset-bottom) + 1rem);
+  }
+}
+
+/* Indicateur offline */
+.offline-indicator {
+  position: fixed;
+  top: var(--safe-area-inset-top);
+  left: 0;
+  right: 0;
+  background: #f56565;
+  color: white;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: var(--font-size-sm);
+  z-index: 9999;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.offline-indicator.show {
+  transform: translateY(0);
+}
+
+/* Prompt d'installation */
+.install-prompt {
+  position: fixed;
+  bottom: var(--safe-area-inset-bottom);
+  left: var(--spacing-sm);
+  right: var(--spacing-sm);
+  z-index: 1000;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* ===================================
+   Utilitaires Responsive
+   =================================== */
+
+/* Visibilité conditionnelle */
+.mobile-only {
+  display: block;
+}
+
+.desktop-only {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none;
+  }
+  
+  .desktop-only {
+    display: block;
+  }
+}
+
+/* Espacement adaptatif */
+.spacing-responsive {
+  padding: var(--spacing-sm);
+}
+
+@media (max-width: 480px) {
+  .spacing-responsive {
+    padding: var(--spacing-xs);
+  }
+}
+
+@media (min-width: 1200px) {
+  .spacing-responsive {
+    padding: var(--spacing-lg);
+  }
+}
+
+/* Texte adaptatif */
+.text-responsive {
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+}
+
+.text-responsive-sm {
+  font-size: var(--font-size-sm);
+}
+
+.text-responsive-lg {
+  font-size: var(--font-size-lg);
+}
+
+/* ===================================
+   Recharts Responsive Overrides
+   =================================== */
+
+/* Adaptations pour les graphiques Recharts */
+.recharts-responsive-container {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 300px;
+}
+
+@media (max-width: 600px) {
+  .recharts-responsive-container {
+    min-height: 250px;
+  }
+  
+  /* Légende plus compacte sur mobile */
+  .recharts-legend-wrapper {
+    padding-top: 10px !important;
+  }
+  
+  .recharts-legend-item {
+    margin-right: 10px !important;
+    font-size: 12px !important;
+  }
+  
+  /* Tooltip adaptatif */
+  .recharts-tooltip-wrapper {
+    font-size: 12px !important;
+  }
+}
+
+/* ===================================
+   Chakra UI Responsive Overrides
+   =================================== */
+
+/* Ajustements pour Chakra UI sur mobile */
+@media (max-width: 600px) {
+  .chakra-container {
+    padding-left: var(--spacing-sm) !important;
+    padding-right: var(--spacing-sm) !important;
+  }
+  
+  .chakra-heading {
+    font-size: var(--font-size-lg) !important;
+  }
+  
+  .chakra-text {
+    font-size: var(--font-size-sm) !important;
+  }
+}
+
+/* ===================================
+   Animations et Performance
+   =================================== */
+
+/* Réduction des animations sur mobiles faibles */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Optimisations GPU pour les animations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* ===================================
+   Print Styles
+   =================================== */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-full-width {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
