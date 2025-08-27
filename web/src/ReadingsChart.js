@@ -49,17 +49,60 @@ function pivotReadings(rawReadings, selectedRooms, includeWeather = false, weath
 
   // Ajouter les données météo extérieures si demandé
   if (includeWeather && Array.isArray(weatherData)) {
-    weatherData.forEach((item) => {
+    const now = Date.now();
+    console.log('Traitement météo:', { weatherDataLength: weatherData.length, now: new Date(now) });
+
+    // Séparer les données réelles et les prévisions
+    const realData = weatherData.filter(item => item.timestamp <= now);
+    const forecastData = weatherData.filter(item => item.timestamp > now);
+
+    // Ajouter les données réelles
+    realData.forEach((item, index) => {
       const ts = item.timestamp;
       if (!grouped[ts]) grouped[ts] = { timestamp: ts };
-      grouped[ts]['Extérieur (Belgique)'] = item.temperature;
+      grouped[ts]['Extérieur'] = item.temperature;
+      if (index < 3) console.log('Données réelles:', { time: new Date(ts), temp: item.temperature });
     });
+
+    // Ajouter les prévisions avec continuité
+    forecastData.forEach((item, index) => {
+      const ts = item.timestamp;
+      if (!grouped[ts]) grouped[ts] = { timestamp: ts };
+      grouped[ts]['Extérieur (Prévision)'] = item.temperature;
+      if (index < 3) console.log('Prévisions:', { time: new Date(ts), temp: item.temperature });
+    });
+
+    // Assurer la continuité : ajouter le dernier point réel comme premier point de prévision
+    if (realData.length > 0 && forecastData.length > 0) {
+      const lastRealPoint = realData[realData.length - 1];
+      const firstForecastPoint = forecastData[0];
+
+      console.log('Point de transition:', {
+        lastReal: { time: new Date(lastRealPoint.timestamp), temp: lastRealPoint.temperature },
+        firstForecast: { time: new Date(firstForecastPoint.timestamp), temp: firstForecastPoint.temperature }
+      });
+
+      // Ajouter le dernier point réel au timestamp des prévisions pour la continuité
+      const lastRealTs = lastRealPoint.timestamp;
+      const firstForecastTs = firstForecastPoint.timestamp;
+
+      // Étendre la courbe réelle jusqu'au premier point de prévision
+      if (!grouped[firstForecastTs]) grouped[firstForecastTs] = { timestamp: firstForecastTs };
+      grouped[firstForecastTs]['Extérieur'] = lastRealPoint.temperature;
+
+      // Commencer les prévisions avec la même température pour assurer la continuité
+      grouped[firstForecastTs]['Extérieur (Prévision)'] = lastRealPoint.temperature;
+
+      console.log('Continuité assurée avec température:', lastRealPoint.temperature, 'aux deux courbes');
+    }
   }
 
   const all = Object.values(grouped).sort((a, b) => a.timestamp - b.timestamp);
 
   // S'assurer que toutes les pièces sélectionnées ont une valeur (null si pas de données)
-  const allRooms = includeWeather ? [...selectedRooms, 'Extérieur (Belgique)'] : selectedRooms;
+  const allRooms = includeWeather
+    ? [...selectedRooms, 'Extérieur', 'Extérieur (Prévision)']
+    : selectedRooms;
   all.forEach(point => {
     allRooms.forEach(room => {
       if (point[room] === undefined) point[room] = null;
@@ -174,7 +217,16 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
   }, [showWeather, startDate, weatherStartDate, weatherEndDate, fetchWeatherData]);
 
   const chartData = pivotReadings(data, selectedRooms, showWeather, weatherData);
-  const allRooms = showWeather ? [...selectedRooms, 'Extérieur (Belgique)'] : selectedRooms;
+  const allRooms = showWeather ? [...selectedRooms, 'Extérieur', 'Extérieur (Prévision)'] : selectedRooms;
+
+  // Debug: afficher les données du graphique
+  React.useEffect(() => {
+    if (showWeather && chartData.length > 0) {
+      console.log('ChartData sample:', chartData.slice(0, 3));
+      console.log('AllRooms:', allRooms);
+      console.log('WeatherData length:', weatherData.length);
+    }
+  }, [chartData, allRooms, weatherData.length, showWeather]);
 
   const hourlyTicks = React.useMemo(() => makeHourlyTicks(chartData), [chartData]);
 
@@ -256,19 +308,40 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
                   align="right"            // collée à droite
                   wrapperStyle={{ right: -15 }} // petit décalage optionnel
                 />
-                {allRooms.map((room) => (
-                  <Line
-                    key={room}
-                    type="monotone"
-                    dataKey={`${room}`}
-                    name={`${room}`}
-                    stroke={room === 'Extérieur (Belgique)' ? '#FF6B35' : colorForRoom(room)}
-                    strokeWidth={room === 'Extérieur (Belgique)' ? 3 : 2}
-                    dot={false}
-                    connectNulls
-                    strokeDasharray={room === 'Extérieur (Belgique)' ? '5 5' : '0'}
-                  />
-                ))}
+                {allRooms.map((room) => {
+                  // Déterminer le style selon le type de données météo
+                  const isWeatherReal = room === 'Extérieur';
+                  const isWeatherForecast = room === 'Extérieur (Prévision)';
+                  const isWeather = isWeatherReal || isWeatherForecast;
+
+                  return (
+                    <Line
+                      key={room}
+                      type="monotone"
+                      dataKey={`${room}`}
+                      name={isWeatherForecast ? '' : room}  // Nom vide pour cacher de la légende
+                      stroke={
+                        isWeatherReal ? '#2563EB' :      // Bleu pour température extérieure réelle
+                          isWeatherForecast ? '#2563EB' :  // Gris pour prévisions
+                            colorForRoom(room)               // Couleurs normales pour les pièces
+                      }
+                      strokeWidth={
+                        isWeatherReal ? 4 :              // Plus épais pour température extérieure
+                          isWeatherForecast ? 2 :          // Normal pour prévisions
+                            2                                // Normal pour les pièces
+                      }
+                      dot={false}
+                      connectNulls
+                      strokeDasharray={
+                        isWeatherReal ? '0' :           // Ligne continue pour données réelles
+                          isWeatherForecast ? '5 5' :     // Pointillés pour prévisions
+                            '0'                             // Ligne continue pour capteurs
+                      }
+                      opacity={isWeatherForecast ? 0.8 : 1} // Prévisions un peu transparentes
+                      legendType={isWeatherForecast ? 'none' : 'line'} // Pas de légende pour prévisions
+                    />
+                  );
+                })}
                 <Brush
                   dataKey="timestamp"
                   height={24}
