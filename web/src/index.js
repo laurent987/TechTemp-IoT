@@ -21,7 +21,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('[PWA] SW registered: ', registration);
-        
+
         // Vérifier les mises à jour
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;

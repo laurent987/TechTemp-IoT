@@ -33,10 +33,10 @@ export default function InstallPrompt() {
 
   const handleInstall = async () => {
     setIsInstalling(true);
-    
+
     try {
       const success = await promptInstall();
-      
+
       if (success) {
         toast({
           title: 'Installation réussie !',
@@ -71,7 +71,7 @@ export default function InstallPrompt() {
 
   const handleDismiss = () => {
     setIsVisible(false);
-    
+
     // Réafficher après 24h
     setTimeout(() => {
       setIsVisible(true);
@@ -99,7 +99,7 @@ export default function InstallPrompt() {
               <AlertDescription color="gray.600" fontSize="sm" mt={1}>
                 Accédez rapidement à vos données depuis votre écran d'accueil
               </AlertDescription>
-              
+
               <HStack spacing={2} mt={3}>
                 <Button
                   size="sm"
@@ -112,7 +112,7 @@ export default function InstallPrompt() {
                 >
                   Installer
                 </Button>
-                
+
                 <Button
                   size="sm"
                   variant="ghost"
@@ -123,7 +123,7 @@ export default function InstallPrompt() {
                 </Button>
               </HStack>
             </Box>
-            
+
             <CloseButton
               alignSelf="flex-start"
               position="relative"
@@ -154,10 +154,10 @@ export function InstallButton() {
 
   const handleInstall = async () => {
     setIsInstalling(true);
-    
+
     try {
       const success = await promptInstall();
-      
+
       if (success) {
         toast({
           title: 'App installée !',

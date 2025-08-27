@@ -53,7 +53,7 @@ function App() {
 
   // PWA hooks
   const { isOnline, isInstalled } = usePWA();
-  
+
   // Responsive design
   const isMobile = useBreakpointValue({ base: true, md: false });
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -62,15 +62,15 @@ function App() {
     <Box className="app-container" bg="gray.50">
       {/* Install prompt - seulement si pas installée */}
       {!isInstalled && <InstallPrompt />}
-      
+
       {/* Indicateur offline */}
       {!isOnline && (
-        <Box 
+        <Box
           className="offline-indicator show"
-          bg="red.500" 
-          color="white" 
-          textAlign="center" 
-          p={2} 
+          bg="red.500"
+          color="white"
+          textAlign="center"
+          p={2}
           fontSize="sm"
         >
           📡 Mode hors ligne - Données mises en cache
@@ -96,10 +96,10 @@ function App() {
 
         {/* Desktop: Sidebar fixe */}
         {!isMobile && (
-          <Box 
-            w="300px" 
-            bg="white" 
-            borderRight="1px" 
+          <Box
+            w="300px"
+            bg="white"
+            borderRight="1px"
             borderColor="gray.200"
             className="sidebar desktop-only"
           >
@@ -110,7 +110,7 @@ function App() {
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
             />
-            
+
             {/* Section notifications en bas de sidebar */}
             <Box p={4} borderTop="1px" borderColor="gray.100">
               <NotificationStatus />
@@ -131,7 +131,7 @@ function App() {
                 setSelectedDate={setSelectedDate}
                 onClose={onClose}
               />
-              
+
               {/* Section notifications mobile */}
               <Box p={4} borderTop="1px" borderColor="gray.100">
                 <NotificationStatus />
@@ -141,8 +141,8 @@ function App() {
         )}
 
         {/* Contenu principal */}
-        <Box 
-          flex="1" 
+        <Box
+          flex="1"
           className="main-content"
           ml={isMobile ? 0 : 0}
           pt={isMobile ? 16 : 8}

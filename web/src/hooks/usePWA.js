@@ -66,7 +66,7 @@ export function usePWA() {
     // Vérification basique pour PWA installée
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isIOSInstalled = window.navigator.standalone === true;
-    
+
     if (isStandalone || isIOSInstalled) {
       setIsInstalled(true);
       console.log('[PWA] App is running in standalone mode');
@@ -85,7 +85,7 @@ export function usePWA() {
           registration.addEventListener('updatefound', () => {
             console.log('[PWA] SW update found');
             const newWorker = registration.installing;
-            
+
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 console.log('[PWA] SW update available');
@@ -115,15 +115,15 @@ export function usePWA() {
     try {
       deferredPrompt.prompt();
       const result = await deferredPrompt.userChoice;
-      
+
       console.log('[PWA] Install prompt result:', result.outcome);
-      
+
       if (result.outcome === 'accepted') {
         setIsInstallable(false);
         setDeferredPrompt(null);
         return true;
       }
-      
+
       return false;
     } catch (error) {
       console.error('[PWA] Install prompt error:', error);
@@ -140,7 +140,7 @@ export function usePWA() {
 
     // Dire au SW en attente de prendre le contrôle
     swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    
+
     // Rafraîchir la page pour charger la nouvelle version
     window.location.reload();
   }, [swRegistration]);
@@ -181,12 +181,12 @@ export function usePWA() {
     isInstallable,
     isInstalled,
     updateAvailable,
-    
+
     // Actions
     promptInstall,
     applyUpdate,
     shareApp,
-    
+
     // Données
     swRegistration
   };

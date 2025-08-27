@@ -16,10 +16,10 @@ import {
   Icon,
   Tooltip
 } from '@chakra-ui/react';
-import { 
-  FiBell, 
-  FiBellOff, 
-  FiAlertCircle, 
+import {
+  FiBell,
+  FiBellOff,
+  FiAlertCircle,
   FiCheckCircle,
   FiX,
   FiWifi,
@@ -32,17 +32,17 @@ import { usePWA } from '../hooks/usePWA';
  * Composant pour gérer le statut et les paramètres des notifications
  */
 export default function NotificationStatus() {
-  const { 
-    permission, 
-    isSubscribed, 
-    isSupported, 
+  const {
+    permission,
+    isSubscribed,
+    isSupported,
     loading,
     requestPermission,
     subscribe,
     unsubscribe,
     sendTestNotification
   } = useNotifications();
-  
+
   const { isOnline } = usePWA();
   const toast = useToast();
   const [isTesting, setIsTesting] = useState(false);
@@ -70,7 +70,7 @@ export default function NotificationStatus() {
             return;
           }
         }
-        
+
         await subscribe();
         toast({
           title: 'Notifications activées',
@@ -92,7 +92,7 @@ export default function NotificationStatus() {
 
   const handleTestNotification = async () => {
     setIsTesting(true);
-    
+
     try {
       await sendTestNotification();
       toast({
@@ -119,15 +119,15 @@ export default function NotificationStatus() {
     if (!isSupported) {
       return <Badge colorScheme="gray">Non supporté</Badge>;
     }
-    
+
     if (permission === 'denied') {
       return <Badge colorScheme="red">Bloquées</Badge>;
     }
-    
+
     if (isSubscribed) {
       return <Badge colorScheme="green">Activées</Badge>;
     }
-    
+
     return <Badge colorScheme="yellow">Inactives</Badge>;
   };
 
@@ -141,12 +141,12 @@ export default function NotificationStatus() {
             <Text fontWeight="semibold">Notifications</Text>
             {getStatusBadge()}
           </HStack>
-          
+
           <HStack>
             <Tooltip label={isOnline ? 'En ligne' : 'Hors ligne'}>
-              <Icon 
-                as={isOnline ? FiWifi : FiWifiOff} 
-                color={isOnline ? 'green.500' : 'red.500'} 
+              <Icon
+                as={isOnline ? FiWifi : FiWifiOff}
+                color={isOnline ? 'green.500' : 'red.500'}
               />
             </Tooltip>
           </HStack>
@@ -208,7 +208,7 @@ export default function NotificationStatus() {
               >
                 Tester les notifications
               </Button>
-              
+
               <Text fontSize="xs" color="gray.500" textAlign="center">
                 Les alertes seront envoyées en cas de température anormale
               </Text>
@@ -252,8 +252,8 @@ export function NotificationIndicator() {
   return (
     <HStack spacing={2}>
       <Icon as={getIcon()} color={getColor()} />
-      <Icon 
-        as={isOnline ? FiWifi : FiWifiOff} 
+      <Icon
+        as={isOnline ? FiWifi : FiWifiOff}
         color={isOnline ? 'green.400' : 'red.400'}
         boxSize={3}
       />

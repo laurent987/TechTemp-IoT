@@ -25,7 +25,7 @@ const API_CACHE_PATTERNS = [
 // Installation du Service Worker
 self.addEventListener('install', (event) => {
   console.log('[SW] Installation');
-  
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -45,7 +45,7 @@ self.addEventListener('install', (event) => {
 // Activation du Service Worker
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activation');
-  
+
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
@@ -83,9 +83,9 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Stratégie pour les ressources statiques (Cache First)
-  if (request.destination === 'script' || 
-      request.destination === 'style' || 
-      request.destination === 'image') {
+  if (request.destination === 'script' ||
+    request.destination === 'style' ||
+    request.destination === 'image') {
     event.respondWith(cacheFirstStrategy(request));
     return;
   }
@@ -104,22 +104,22 @@ self.addEventListener('fetch', (event) => {
 async function networkFirstStrategy(request) {
   try {
     const response = await fetch(request);
-    
+
     // Mettre en cache les réponses valides
     if (response.status === 200) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, response.clone());
     }
-    
+
     return response;
   } catch (error) {
     console.log('[SW] Network failed, checking cache for:', request.url);
     const cachedResponse = await caches.match(request);
-    
+
     if (cachedResponse) {
       return cachedResponse;
     }
-    
+
     throw error;
   }
 }
@@ -127,11 +127,11 @@ async function networkFirstStrategy(request) {
 // Stratégie Cache First (pour les ressources statiques)
 async function cacheFirstStrategy(request) {
   const cachedResponse = await caches.match(request);
-  
+
   if (cachedResponse) {
     return cachedResponse;
   }
-  
+
   try {
     const response = await fetch(request);
     const cache = await caches.open(CACHE_NAME);
@@ -159,7 +159,7 @@ async function networkFirstWithOfflineFallback(request) {
 // Gestion des notifications push
 self.addEventListener('push', (event) => {
   console.log('[SW] Push reçu:', event);
-  
+
   const options = {
     body: 'Nouvelle alerte température !',
     icon: '/icons/icon-192.png',
@@ -201,7 +201,7 @@ self.addEventListener('push', (event) => {
 // Gestion des clics sur les notifications
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification click:', event);
-  
+
   event.notification.close();
 
   if (event.action === 'close') {
@@ -219,7 +219,7 @@ self.addEventListener('notificationclick', (event) => {
             return client.focus();
           }
         }
-        
+
         // Sinon, ouvrir une nouvelle fenêtre
         return clients.openWindow('/');
       })
@@ -229,7 +229,7 @@ self.addEventListener('notificationclick', (event) => {
 // Synchronisation en arrière-plan (pour futures fonctionnalités)
 self.addEventListener('sync', (event) => {
   console.log('[SW] Background sync:', event.tag);
-  
+
   if (event.tag === 'temperature-sync') {
     event.waitUntil(doTemperatureSync());
   }
@@ -243,7 +243,7 @@ async function doTemperatureSync() {
 // Gestion des messages depuis l'app
 self.addEventListener('message', (event) => {
   console.log('[SW] Message reçu:', event.data);
-  
+
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }

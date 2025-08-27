@@ -15,12 +15,12 @@ export function useNotifications() {
 
   // Vérifier le support des notifications
   useEffect(() => {
-    const supported = 'Notification' in window && 
-                     'serviceWorker' in navigator && 
-                     'PushManager' in window;
-    
+    const supported = 'Notification' in window &&
+      'serviceWorker' in navigator &&
+      'PushManager' in window;
+
     setIsSupported(supported);
-    
+
     if (!supported) {
       console.warn('[Notifications] Push notifications not supported');
     }
@@ -34,7 +34,7 @@ export function useNotifications() {
       try {
         const registration = await navigator.serviceWorker.ready;
         const existingSubscription = await registration.pushManager.getSubscription();
-        
+
         if (existingSubscription) {
           setSubscription(existingSubscription);
           setIsSubscribed(true);
@@ -61,7 +61,7 @@ export function useNotifications() {
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
-      
+
       console.log('[Notifications] Permission result:', result);
       return result === 'granted';
     } catch (error) {
@@ -84,10 +84,10 @@ export function useNotifications() {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      
+
       // Clé VAPID publique (à remplacer par la vraie)
       const vapidPublicKey = 'YOUR_VAPID_PUBLIC_KEY_HERE';
-      
+
       const pushSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
@@ -120,10 +120,10 @@ export function useNotifications() {
     try {
       await subscription.unsubscribe();
       await removeSubscriptionFromServer(subscription);
-      
+
       setSubscription(null);
       setIsSubscribed(false);
-      
+
       console.log('[Notifications] Successfully unsubscribed');
     } catch (error) {
       console.error('[Notifications] Unsubscribe failed:', error);
@@ -171,7 +171,7 @@ export function useNotifications() {
     isSupported,
     loading,
     subscription,
-    
+
     // Actions
     requestPermission,
     subscribe,
