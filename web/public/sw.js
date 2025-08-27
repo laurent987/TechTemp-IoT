@@ -1,8 +1,8 @@
 /* eslint-disable no-restricted-globals */
 // TechTemp IoT Service Worker
-// Version 1.0.0
+// Version 1.1.0 - Nouvelles icônes thermomètre
 
-const CACHE_NAME = 'techtemp-v1';
+const CACHE_NAME = 'techtemp-v1.1';
 const OFFLINE_URL = '/offline.html';
 
 // Ressources critiques à mettre en cache (App Shell)
@@ -11,8 +11,14 @@ const STATIC_CACHE_URLS = [
   '/static/js/bundle.js',
   '/static/css/main.css',
   '/manifest.json',
+  '/icons/icon-96.png',
+  '/icons/icon-144.png',
   '/icons/icon-192.png',
+  '/icons/icon-384.png',
   '/icons/icon-512.png',
+  '/icons/badge-72.png',
+  '/icons/checkmark.png',
+  '/icons/xmark.png',
   OFFLINE_URL
 ];
 

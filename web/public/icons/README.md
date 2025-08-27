@@ -1,26 +1,37 @@
-# PWA Icons Placeholder
+# TechTemp PWA Icons
 
-Ces fichiers doivent être créés avec les tailles suivantes :
+🌡️ Icônes officielles de l'application TechTemp IoT avec design thermomètre bleu.
 
-## Icônes obligatoires :
-- `icon-192.png` (192x192) - Icône principale
-- `icon-512.png` (512x512) - Icône haute résolution
-- `badge-72.png` (72x72) - Badge de notification
-- `checkmark.png` (24x24) - Action notification
-- `xmark.png` (24x24) - Action notification
+## Icônes principales (PWA)
+- `icon-96.png` - 96x96px - Petite taille
+- `icon-144.png` - 144x144px - Android home screen  
+- `icon-192.png` - 192x192px - Standard PWA
+- `icon-384.png` - 384x384px - Grande taille
+- `icon-512.png` - 512x512px - App stores, splash screen
+- `badge-72.png` - 72x72px - Badge notifications
 
-## Générateur recommandé :
-https://www.pwabuilder.com/imageGenerator
+## Icônes d'action (Notifications)
+- `checkmark.png` - Action positive (Voir détails)
+- `xmark.png` - Action fermeture (Fermer)
 
-## Design suggéré :
-- Thème : Bleu (#2563EB) avec thermomètre
-- Style : Moderne, flat design
-- Forme : Arrondie avec padding
-- Texte : "TT" ou icône thermomètre simple
+## Fichiers source
+- `icon-base.svg` - Fichier SVG source principal
+- `checkmark.svg` - Source checkmark
+- `xmark.svg` - Source xmark
 
-## Commande pour créer temporairement :
+## Design
+**Thème:** Bleu TechTemp (#2563EB)
+**Style:** Thermomètre avec gradient mercure rouge-orange-jaune
+**Éléments:** 
+- Texte "TechTemp" et "IoT Monitoring"
+- Échelle de température (10°-30°)
+- Points IoT animés
+- Background radial bleu
+
+## Génération
+Les icônes sont générées depuis `icon-base.svg` avec le script `generate-icons.js`:
 ```bash
-# Copier les icônes existants comme placeholder
-cp logo192.png icons/icon-192.png
-cp logo512.png icons/icon-512.png
+node generate-icons.js
 ```
+
+Nécessite ImageMagick, Inkscape ou rsvg-convert.
