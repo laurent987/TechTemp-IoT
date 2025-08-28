@@ -4,6 +4,8 @@
 #include <time.h>
 #include <stdbool.h>
 
+#define MAX_READINGS_HISTORY 100  // Garder max 100 dernières lectures
+
 // Structure pour l'état d'un device
 typedef struct {
     int sensor_id;
@@ -13,6 +15,12 @@ typedef struct {
     double last_temperature;
     double last_humidity;
     int readings_count_last_hour;
+    
+    // Historique pour calcul fenêtre glissante
+    time_t reading_timestamps[MAX_READINGS_HISTORY];
+    int reading_history_index;
+    int reading_history_count;
+    
     bool is_online;
     char status[16]; // "online", "warning", "offline"
 } DeviceStatus;

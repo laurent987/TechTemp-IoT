@@ -45,7 +45,11 @@ function App() {
         <Box
           as="main"
           className="main-content"
-          pt={!isOnline ? 16 : 4} // Plus d'espace si indicateur offline
+          pt={{
+            base: !isOnline ? 14 : 2, // Réduit sur mobile
+            md: !isOnline ? 16 : 4    // Normal sur desktop
+          }}
+          px={{ base: 0, md: 0 }} // Pas de padding horizontal pour permettre edge-to-edge
           display="flex"
           flexDirection="column"
           flex="1"

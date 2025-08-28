@@ -16,7 +16,8 @@ export default function MonitoringPage() {
     <Box flex="1" className="monitoring-container">
       <Container
         maxW={containerMaxW}
-        p={{ base: 4, md: 6 }}
+        p={{ base: 0, md: 6 }}
+        px={{ base: 1, md: 6 }}
         className="monitoring-content"
       >
         <SystemMonitoring />

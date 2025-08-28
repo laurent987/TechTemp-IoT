@@ -31,6 +31,31 @@ const char* get_room_name(int room_id) {
     return fallback;
 }
 
+// Fonction pour ajouter une lecture dans l'historique
+void add_reading_to_history(DeviceStatus *device, time_t timestamp) {
+    device->reading_timestamps[device->reading_history_index] = timestamp;
+    device->reading_history_index = (device->reading_history_index + 1) % MAX_READINGS_HISTORY;
+    
+    if (device->reading_history_count < MAX_READINGS_HISTORY) {
+        device->reading_history_count++;
+    }
+}
+
+// Fonction pour calculer les lectures de la dernière heure
+int calculate_readings_last_hour(DeviceStatus *device) {
+    time_t now = time(NULL);
+    time_t one_hour_ago = now - 3600; // 3600 secondes = 1 heure
+    int count = 0;
+    
+    for (int i = 0; i < device->reading_history_count; i++) {
+        if (device->reading_timestamps[i] >= one_hour_ago) {
+            count++;
+        }
+    }
+    
+    return count;
+}
+
 int find_device_index(int sensor_id) {
     for (int i = 0; i < system_health.total_devices; i++) {
         if (system_health.devices[i].sensor_id == sensor_id) {
@@ -131,6 +156,11 @@ void monitor_update_device(int sensor_id, int room_id, double temperature, doubl
         strncpy(device->room_name, get_room_name(room_id), sizeof(device->room_name) - 1);
         device->readings_count_last_hour = 0;
         
+        // Initialiser l'historique des lectures
+        device->reading_history_index = 0;
+        device->reading_history_count = 0;
+        memset(device->reading_timestamps, 0, sizeof(device->reading_timestamps));
+        
         printf("[Monitor] New device registered: sensor_%d in %s\n", sensor_id, device->room_name);
     }
     
@@ -139,7 +169,12 @@ void monitor_update_device(int sensor_id, int room_id, double temperature, doubl
     device->last_seen = now;
     device->last_temperature = temperature;
     device->last_humidity = humidity;
-    device->readings_count_last_hour++; // Simplifié pour l'instant
+    
+    // Ajouter cette lecture à l'historique
+    add_reading_to_history(device, now);
+    
+    // Calculer les lectures de la dernière heure
+    device->readings_count_last_hour = calculate_readings_last_hour(device);
     
     // Mettre à jour le statut global
     update_global_status();
