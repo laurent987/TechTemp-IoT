@@ -157,56 +157,78 @@ const SystemMonitoring = () => {
   }
 
   return (
-    <Box p={6} bg="gray.50" minH="100vh">
+    <Box p={{ base: 4, md: 6 }} bg="gray.50" w="100%">
       <VStack spacing={6} align="stretch">
         {/* Header */}
-        <Flex justify="space-between" align="center">
+        <Flex
+          direction={{ base: "column", lg: "row" }}
+          justify={{ lg: "space-between" }}
+          align={{ base: "stretch", lg: "center" }}
+          gap={4}
+        >
           <Heading size="lg" color="blue.600">
             🖥️ Monitoring Système IoT
           </Heading>
-          <HStack spacing={4}>
-            <Text fontSize="sm" color="gray.600">
-              Source:
-              <Badge ml={2} colorScheme={useRealTime ? "green" : "blue"}>
+          <Flex
+            direction={{ base: "column", md: "row" }}
+            gap={4}
+            align={{ md: "center" }}
+          >
+            <HStack spacing={2} flexWrap="wrap">
+              <Text fontSize="sm" color="gray.600" flexShrink={0}>
+                Source:
+              </Text>
+              <Badge colorScheme={useRealTime ? "green" : "blue"}>
                 {useRealTime ? "Temps Réel" : "Firebase"}
               </Badge>
-            </Text>
-            <Button
-              size="sm"
-              variant={useRealTime ? "solid" : "outline"}
-              colorScheme="green"
-              onClick={() => setUseRealTime(!useRealTime)}
-            >
-              {useRealTime ? "🚀 Temps Réel" : "☁️ Firebase"}
-            </Button>
-            <Text fontSize="sm" color="gray.600">
-              Auto-refresh:
-              <Badge ml={2} colorScheme={autoRefresh ? "green" : "gray"}>
-                {autoRefresh ? "ON" : "OFF"}
-              </Badge>
-              <Text fontSize="xs" color="gray.500">
-                {useRealTime ? "5s" : "30s"}
-              </Text>
-            </Text>
-            <Button
-              size="sm"
-              variant={autoRefresh ? "solid" : "outline"}
-              colorScheme="blue"
-              onClick={() => setAutoRefresh(!autoRefresh)}
-            >
-              {autoRefresh ? "Pause" : "Start"}
-            </Button>
-            <Button
-              size="sm"
-              leftIcon={<RepeatIcon />}
-              onClick={fetchSystemHealth}
-              isLoading={loading}
-              colorScheme="blue"
-              variant="outline"
-            >
-              Actualiser
-            </Button>
-          </HStack>
+              <Button
+                size="sm"
+                variant={useRealTime ? "solid" : "outline"}
+                colorScheme="green"
+                onClick={() => setUseRealTime(!useRealTime)}
+                fontSize={{ base: "xs", md: "sm" }}
+              >
+                {useRealTime ? "🚀 Temps Réel" : "☁️ Firebase"}
+              </Button>
+            </HStack>
+
+            <HStack spacing={2} flexWrap="wrap">
+              <VStack spacing={0} align="start">
+                <HStack spacing={1}>
+                  <Text fontSize="sm" color="gray.600" flexShrink={0}>
+                    Auto-refresh:
+                  </Text>
+                  <Badge colorScheme={autoRefresh ? "green" : "gray"}>
+                    {autoRefresh ? "ON" : "OFF"}
+                  </Badge>
+                </HStack>
+                <Text fontSize="xs" color="gray.500">
+                  {useRealTime ? "5s" : "30s"}
+                </Text>
+              </VStack>
+              <Button
+                size="sm"
+                variant={autoRefresh ? "solid" : "outline"}
+                colorScheme="blue"
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                fontSize={{ base: "xs", md: "sm" }}
+              >
+                {autoRefresh ? "Pause" : "Start"}
+              </Button>
+              <Button
+                size="sm"
+                leftIcon={<RepeatIcon />}
+                onClick={fetchSystemHealth}
+                isLoading={loading}
+                colorScheme="blue"
+                variant="outline"
+                fontSize={{ base: "xs", md: "sm" }}
+              >
+                <Text display={{ base: "none", md: "block" }}>Actualiser</Text>
+                <Text display={{ base: "block", md: "none" }}>↻</Text>
+              </Button>
+            </HStack>
+          </Flex>
         </Flex>
 
         {error && (
@@ -227,7 +249,7 @@ const SystemMonitoring = () => {
                 </Text>
               </CardHeader>
               <CardBody>
-                <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={6}>
+                <Grid templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={6}>
                   <GridItem>
                     <Stat>
                       <StatLabel>Statut Global</StatLabel>
@@ -299,110 +321,126 @@ const SystemMonitoring = () => {
               </CardBody>
             </Card>
 
-            {/* Tableau des devices */}
-            <Card>
-              <CardHeader>
-                <HStack justify="space-between">
-                  <Heading size="md">État des Devices</Heading>
-                  <Badge colorScheme={useRealTime ? "green" : "blue"} variant="subtle">
-                    {useRealTime ? "📡 Temps Réel - Dernières valeurs mesurées" : "📊 Firebase - Moyennes sur 1 heure"}
-                  </Badge>
-                </HStack>
-              </CardHeader>
-              <CardBody>
-                <Box overflowX="auto">
-                  <Table variant="simple" size="sm">
-                    <Thead bg="gray.50">
-                      <Tr>
-                        <Th>Statut</Th>
-                        <Th>Device</Th>
-                        <Th>Room ID</Th>
-                        <Th>Room</Th>
-                        <Th>Dernière donnée</Th>
-                        <Th isNumeric>Lectures/h</Th>
-                        <Th isNumeric>{useRealTime ? "Temp. instantanée (°C)" : "Temp. moy. 1h (°C)"}</Th>
-                        <Th isNumeric>{useRealTime ? "Humid. instantanée (%)" : "Humid. moy. 1h (%)"}</Th>
-                        <Th>Problèmes</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {systemHealth.devices
-                        .sort((a, b) => a.sensor_id - b.sensor_id) // Tri par sensor_id croissant
-                        .map((device, index) => (
-                          <Tr key={device.sensor_id} bg={index % 2 === 0 ? "white" : "gray.50"}>
-                            <Td>
-                              <Tooltip label={`Statut: ${device.status}`}>
-                                <HStack>
-                                  <Icon
-                                    as={getStatusIcon(device.status)}
-                                    color={`${getStatusColor(device.status)}.500`}
-                                  />
-                                  <Badge
-                                    colorScheme={getStatusColor(device.status)}
-                                    variant="subtle"
-                                    textTransform="capitalize"
-                                  >
-                                    {device.status}
-                                  </Badge>
+            {/* Cartes des devices - Une carte par room */}
+            <Box>
+              <Heading size="md" mb={4}>État des Devices</Heading>
+              <Badge colorScheme={useRealTime ? "green" : "blue"} variant="subtle" mb={4}>
+                {useRealTime ? "📡 Temps Réel - Dernières valeurs mesurées" : "📊 Firebase - Moyennes sur 1 heure"}
+              </Badge>
+
+              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", xl: "repeat(3, 1fr)" }} gap={6}>
+                {systemHealth.devices
+                  .sort((a, b) => a.sensor_id - b.sensor_id)
+                  .map((device) => (
+                    <Card key={device.sensor_id} variant="outline" bg="white" overflow="hidden">
+                      {/* Header simplifié avec juste le nom et status */}
+                      <CardHeader bg="blue.50" borderBottom="1px" borderColor="blue.100" py={3}>
+                        <Flex justify="space-between" align="center">
+                          <Heading size="md" color="blue.700" fontWeight="600">
+                            {device.room_name}
+                          </Heading>
+                          <HStack spacing={2}>
+                            <Icon
+                              as={getStatusIcon(device.status)}
+                              color={`${getStatusColor(device.status)}.500`}
+                              boxSize={4}
+                            />
+                            <Text fontSize="sm" fontWeight="medium" color={`${getStatusColor(device.status)}.600`} textTransform="capitalize">
+                              {device.status}
+                            </Text>
+                          </HStack>
+                        </Flex>
+                      </CardHeader>
+
+                      <CardBody p={4}>
+                        <VStack spacing={4} align="stretch">
+                          {/* Conteneur principal pour stats temp/humidité */}
+                          <Box bg="gradient(to-r, red.50, blue.50)" p={4}>
+                            <Grid templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)" }} gap={6}>
+                              {/* Température */}
+                              <VStack spacing={2}>
+                                <HStack spacing={2} align="baseline">
+                                  <Text fontSize="2xl">🌡️</Text>
+                                  <Text fontSize="3xl" fontWeight="bold" color="red.500" fontFamily="mono">
+                                    {useRealTime
+                                      ? device.last_temperature?.toFixed(1)
+                                      : device.avg_temperature?.toFixed(1)
+                                    }
+                                  </Text>
+                                  <Text fontSize="lg" color="red.400" fontWeight="medium">°C</Text>
                                 </HStack>
-                              </Tooltip>
-                            </Td>
-                            <Td>
-                              <Badge colorScheme="blue" variant="outline">
-                                Device {device.sensor_id}
-                              </Badge>
-                            </Td>
-                            <Td>
-                              <Badge colorScheme="orange" variant="outline">
-                                Room {device.room_id}
-                              </Badge>
-                            </Td>
-                            <Td fontWeight="medium">
-                              {device.room_name}
-                            </Td>
-                            <Td>
-                              <VStack spacing={0} align="start">
-                                <Text fontSize="sm">
-                                  {formatLastSeen(device.last_seen)}
-                                </Text>
-                                <Text fontSize="xs" color="gray.500">
-                                  il y a {getMinutesSinceLastReading(device.last_seen)} min
-                                </Text>
                               </VStack>
-                            </Td>
-                            <Td isNumeric>
+
+                              {/* Humidité */}
+                              <VStack spacing={2}>
+                                <HStack spacing={2} align="baseline">
+                                  <Text fontSize="2xl">💧</Text>
+                                  <Text fontSize="3xl" fontWeight="bold" color="blue.500" fontFamily="mono">
+                                    {useRealTime
+                                      ? device.last_humidity?.toFixed(0)
+                                      : device.avg_humidity?.toFixed(1)
+                                    }
+                                  </Text>
+                                  <Text fontSize="lg" color="blue.400" fontWeight="medium">%</Text>
+                                </HStack>
+                              </VStack>
+                            </Grid>
+                          </Box>
+
+                          {/* Informations techniques compactes */}
+                          <Grid templateColumns="repeat(3, 1fr)" gap={3}>
+                            {/* Device info */}
+                            <VStack spacing={1} align="center" p={2} bg="gray.50" borderRadius="md">
+                              <Text fontSize="xs" color="gray.500" fontWeight="medium">DEVICE</Text>
+                              <Badge colorScheme="blue" variant="solid" fontSize="xs">
+                                {device.sensor_id}
+                              </Badge>
+                            </VStack>
+
+                            {/* Room info */}
+                            <VStack spacing={1} align="center" p={2} bg="gray.50" borderRadius="md">
+                              <Text fontSize="xs" color="gray.500" fontWeight="medium">ROOM</Text>
+                              <Badge colorScheme="orange" variant="solid" fontSize="xs">
+                                {device.room_id}
+                              </Badge>
+                            </VStack>
+
+                            {/* Lectures */}
+                            <VStack spacing={1} align="center" p={2} bg="gray.50" borderRadius="md">
+                              <Text fontSize="xs" color="gray.500" fontWeight="medium">LECTURES</Text>
                               <Badge
                                 colorScheme={(useRealTime ? device.readings_last_hour : device.recent_count) > 5 ? "green" : "yellow"}
+                                variant="solid"
+                                fontSize="xs"
                               >
-                                {useRealTime ? device.readings_last_hour : device.recent_count}
+                                {useRealTime ? device.readings_last_hour : device.recent_count}/h
                               </Badge>
-                            </Td>
-                            <Td isNumeric fontFamily="mono">
-                              {useRealTime
-                                ? device.last_temperature?.toFixed(1)
-                                : device.avg_temperature?.toFixed(1)
-                              }°
-                            </Td>
-                            <Td isNumeric fontFamily="mono">
-                              {useRealTime
-                                ? device.last_humidity?.toFixed(0)
-                                : device.avg_humidity?.toFixed(1)
-                              }%
-                            </Td>
-                            <Td>
-                              <Badge colorScheme="green" variant="subtle">
-                                OK
-                              </Badge>
-                            </Td>
-                          </Tr>
-                        ))}
-                    </Tbody>
-                  </Table>
-                </Box>
-              </CardBody>
-            </Card>
+                            </VStack>
+                          </Grid>
 
-            {/* Alertes et Statistiques */}
+                          {/* Footer avec dernière mise à jour */}
+                          <Box pt={2} borderTop="1px" borderColor="gray.100">
+                            <Flex justify="space-between" align="center">
+                              <VStack spacing={0} align="start">
+                                <Text fontSize="xs" color="gray.500">Dernière donnée</Text>
+                                <Text fontSize="xs" fontFamily="mono" color="gray.700">
+                                  {formatLastSeen(device.last_seen)}
+                                </Text>
+                              </VStack>
+                              <VStack spacing={0} align="end">
+                                <Text fontSize="xs" color="gray.500">Il y a</Text>
+                                <Text fontSize="xs" fontWeight="medium" color="gray.700">
+                                  {getMinutesSinceLastReading(device.last_seen)} min
+                                </Text>
+                              </VStack>
+                            </Flex>
+                          </Box>
+                        </VStack>
+                      </CardBody>
+                    </Card>
+                  ))}
+              </Grid>
+            </Box>            {/* Alertes et Statistiques */}
             {(systemHealth.alerts?.length || 0) > 0 && (
               <Card>
                 <CardHeader>
@@ -432,7 +470,7 @@ const SystemMonitoring = () => {
                 <Heading size="md">📊 Résumé Système</Heading>
               </CardHeader>
               <CardBody>
-                <Grid templateColumns="repeat(auto-fit, minmax(150px, 1fr))" gap={4}>
+                <Grid templateColumns={{ base: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} gap={4}>
                   <Stat>
                     <StatLabel>Total Devices</StatLabel>
                     <StatNumber color="blue.600">

@@ -168,6 +168,35 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
   const containerPx = useBreakpointValue({ base: 2, md: 8 });
   const [showWeather, setShowWeather] = React.useState(true);
 
+  // Responsive legend configuration
+  const legendConfig = useBreakpointValue({
+    base: {
+      layout: "horizontal",
+      verticalAlign: "bottom",
+      align: "center",
+      wrapperStyle: {
+        paddingTop: '20px',
+        fontSize: '12px'
+      }
+    },
+    md: {
+      layout: "vertical",
+      verticalAlign: "middle",
+      align: "right",
+      wrapperStyle: {
+        right: -15,
+        fontSize: '14px'
+      }
+    }
+  });
+
+  // Responsive chart dimensions
+  const chartHeight = useBreakpointValue({ base: 450, md: 400 });
+  const chartMargins = useBreakpointValue({
+    base: { top: 5, right: 30, left: 20, bottom: 60 },
+    md: { top: 5, right: 120, left: 20, bottom: 5 }
+  });
+
   // Calculer les dates pour la météo
   const weatherStartDate = React.useMemo(() => {
     if (startDate) {
@@ -279,9 +308,9 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
           )}
 
           {/* Affichage du graphique même pendant le chargement */}
-          <Box position="relative" minH={400}>
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={chartData}>
+          <Box position="relative" minH={chartHeight}>
+            <ResponsiveContainer width="100%" height={chartHeight}>
+              <LineChart data={chartData} margin={chartMargins}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="timestamp"
@@ -303,10 +332,11 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
                 <Tooltip labelFormatter={fmtHour} />
 
                 <Legend
-                  layout="vertical"
-                  verticalAlign="middle"   // milieu en hauteur
-                  align="right"            // collée à droite
-                  wrapperStyle={{ right: -15 }} // petit décalage optionnel
+                  layout={legendConfig.layout}
+                  verticalAlign={legendConfig.verticalAlign}
+                  align={legendConfig.align}
+                  wrapperStyle={legendConfig.wrapperStyle}
+                  iconSize={14}
                 />
                 {allRooms.map((room) => {
                   // Déterminer le style selon le type de données météo
