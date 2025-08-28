@@ -40,10 +40,10 @@ function convertSvgToPng(svgFile, outputFile, size) {
   const commands = [
     // Inkscape (le plus fiable)
     `inkscape --export-png="${outputFile}" --export-width=${size} --export-height=${size} "${svgFile}"`,
-    
+
     // ImageMagick
     `convert -density 300 -background transparent -resize ${size}x${size} "${svgFile}" "${outputFile}"`,
-    
+
     // rsvg-convert (si disponible)
     `rsvg-convert -w ${size} -h ${size} -o "${outputFile}" "${svgFile}"`,
   ];
@@ -52,7 +52,7 @@ function convertSvgToPng(svgFile, outputFile, size) {
     try {
       console.log(`📐 Génération ${size}x${size} -> ${path.basename(outputFile)}`);
       execSync(cmd, { stdio: 'pipe' });
-      
+
       if (fs.existsSync(outputFile)) {
         console.log(`✅ ${path.basename(outputFile)} généré avec succès`);
         return true;
@@ -62,7 +62,7 @@ function convertSvgToPng(svgFile, outputFile, size) {
       continue;
     }
   }
-  
+
   return false;
 }
 
@@ -71,7 +71,7 @@ let successCount = 0;
 
 for (const { size, name } of sizes) {
   const outputPath = path.join(outputDir, name);
-  
+
   if (convertSvgToPng(svgPath, outputPath, size)) {
     successCount++;
   } else {

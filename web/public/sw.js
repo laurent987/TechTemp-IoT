@@ -1,9 +1,14 @@
 /* eslint-disable no-restricted-globals */
-// TechTemp IoT Service Worker
-// Version 1.2.0 - SVG icons support
+// TechTemp IoT Service Worker  
+// Version 1.6.0 - PWA SVG icons
 
-const CACHE_NAME = 'techtemp-v1.2';
+const CACHE_NAME = 'techtemp-v1.6';
 const OFFLINE_URL = '/offline.html';
+
+// Détection du mode développement
+const isDevelopment = self.location.hostname === 'localhost' ||
+  self.location.hostname === '127.0.0.1' ||
+  self.location.port === '3000';
 
 // Ressources critiques à mettre en cache (App Shell)
 const STATIC_CACHE_URLS = [
@@ -12,7 +17,9 @@ const STATIC_CACHE_URLS = [
   '/static/css/main.css',
   '/manifest.json',
   '/favicon.svg',
+  '/favicon-simple.svg',
   '/icons/icon-base.svg',
+  '/icons/icon-pwa.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/badge-72.png',
@@ -79,6 +86,16 @@ self.addEventListener('fetch', (event) => {
   // Ignorer les requêtes non-HTTP/HTTPS
   if (!['http:', 'https:'].includes(url.protocol)) {
     return;
+  }
+
+  // En développement, ignorer les requêtes de hot-reload
+  if (isDevelopment) {
+    if (url.pathname.includes('hot-update') ||
+      url.pathname.includes('webpack') ||
+      url.pathname.includes('sockjs-node') ||
+      url.search.includes('_sw-precache')) {
+      return; // Laisser passer sans interception
+    }
   }
 
   // Stratégie pour les API (Network First avec fallback cache)
