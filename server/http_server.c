@@ -1,5 +1,6 @@
 #include "http_server.h"
 #include "system_monitor.h"
+#include "mqtt_transport.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <time.h>
 
 static void send_http_response(int client_socket, int status_code, const char* content_type, const char* body) {
     char header[1024];
@@ -30,6 +32,31 @@ static void send_http_response(int client_socket, int status_code, const char* c
     send(client_socket, header, strlen(header), 0);
     if (body && content_length > 0) {
         send(client_socket, body, content_length, 0);
+    }
+}
+
+// Fonction pour déclencher une lecture à la demande
+static int trigger_sensor_reading(int sensor_id) {
+    char command[128];
+    
+    if (sensor_id <= 0) {
+        // Déclencher tous les capteurs
+        snprintf(command, sizeof(command), "{\"action\":\"capture\",\"sensor_id\":\"all\"}");
+    } else {
+        // Déclencher un capteur spécifique
+        snprintf(command, sizeof(command), "{\"action\":\"capture\",\"sensor_id\":%d}", sensor_id);
+    }
+    
+    printf("[TRIGGER] Publishing command: %s\n", command);
+    
+    MqttSendStatus status = mqtt_publish("weather/command", command, strlen(command), 1, 0, 5000);
+    
+    if (status == MQTT_SEND_OK) {
+        printf("[TRIGGER] Command sent successfully\n");
+        return 0;
+    } else {
+        printf("[TRIGGER] Failed to send command (status: %d)\n", status);
+        return -1;
     }
 }
 
@@ -84,7 +111,35 @@ static void handle_client_request(int client_socket) {
                 send_http_response(client_socket, 500, "application/json", "{\"error\":\"Monitor not available\"}");
             }
         } else if (strcmp(path, "/") == 0 || strcmp(path, "/health") == 0) {
-            send_http_response(client_socket, 200, "text/plain", "TechTemp System Monitor API\n\nEndpoints:\n/api/system/health - Full system status\n/api/system/status - Simple status");
+            send_http_response(client_socket, 200, "text/plain", "TechTemp System Monitor API\n\nEndpoints:\n/api/system/health - Full system status\n/api/system/status - Simple status\n/api/trigger-reading - Trigger sensor reading (POST)");
+        } else {
+            send_http_response(client_socket, 404, "application/json", "{\"error\":\"Endpoint not found\"}");
+        }
+    } else if (strcmp(method, "POST") == 0) {
+        if (strcmp(path, "/api/trigger-reading") == 0) {
+            // Parser le body pour récupérer sensor_id (optionnel)
+            int sensor_id = 0; // 0 = tous les capteurs
+            
+            // Rechercher sensor_id dans le body si présent
+            char *body_start = strstr(buffer, "\r\n\r\n");
+            if (body_start) {
+                body_start += 4; // Skip "\r\n\r\n"
+                char *sensor_id_str = strstr(body_start, "\"sensor_id\":");
+                if (sensor_id_str) {
+                    sscanf(sensor_id_str + 12, "%d", &sensor_id);
+                }
+            }
+            
+            if (trigger_sensor_reading(sensor_id) == 0) {
+                char response[256];
+                snprintf(response, sizeof(response), 
+                    "{\"status\":\"success\",\"message\":\"Reading triggered for sensor %s\",\"timestamp\":%ld}",
+                    sensor_id > 0 ? "specific" : "all",
+                    time(NULL));
+                send_http_response(client_socket, 200, "application/json", response);
+            } else {
+                send_http_response(client_socket, 500, "application/json", "{\"error\":\"Failed to trigger reading\"}");
+            }
         } else {
             send_http_response(client_socket, 404, "application/json", "{\"error\":\"Endpoint not found\"}");
         }

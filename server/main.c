@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <stdbool.h>
 #include "mqtt_transport.h"
 #include "sqlite3.h"
 #include "cJSON.h"
@@ -35,6 +36,8 @@ void on_mqtt_msg(const char* topic, const void* payload, size_t len, void* user)
     const cJSON *room_id_json = cJSON_GetObjectItemCaseSensitive(json, "room_id");
     const cJSON *temperature_json = cJSON_GetObjectItemCaseSensitive(json, "temperature");
     const cJSON *humidity_json = cJSON_GetObjectItemCaseSensitive(json, "humidity");
+    const cJSON *trigger_json = cJSON_GetObjectItemCaseSensitive(json, "trigger");
+    
     // Firestore + Monitor
     if (cJSON_IsNumber(sensor_id_json) && cJSON_IsNumber(temperature_json) && cJSON_IsNumber(humidity_json)) {
         int sensor_id = sensor_id_json->valueint;
@@ -45,12 +48,25 @@ void on_mqtt_msg(const char* topic, const void* payload, size_t len, void* user)
         time_t now = time(NULL);
         strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
         
-        // Mettre à jour le monitoring temps réel
+        // Mettre à jour le monitoring temps réel (toujours)
         monitor_update_device(sensor_id, room_id, temperature, humidity);
         
-        if (appContext->use_firestore) {
+        // Vérifier si c'est une lecture immédiate (on-demand)
+        bool is_immediate = false;
+        if (cJSON_IsString(trigger_json)) {
+            const char* trigger_type = cJSON_GetStringValue(trigger_json);
+            if (trigger_type && strcmp(trigger_type, "on-demand") == 0) {
+                is_immediate = true;
+                printf("[MQTT] Immediate reading received from sensor %d - skipping Firestore\n", sensor_id);
+            }
+        }
+        
+        // Envoyer à Firestore seulement si ce n'est PAS une lecture immédiate
+        if (appContext->use_firestore && !is_immediate) {
             extern int post_reading_to_firestore(int sensor_id, int room_id, double temperature, double humidity, const char *timestamp, const char *firestore_url, const char *auth_token);
             post_reading_to_firestore(sensor_id, room_id, temperature, humidity, timestamp, appContext->firestore_url, appContext->auth_token);
+        } else if (is_immediate) {
+            printf("[MQTT] Immediate reading from sensor %d - Firestore storage skipped\n", sensor_id);
         }
     }
     cJSON_Delete(json);

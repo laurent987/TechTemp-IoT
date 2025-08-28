@@ -284,6 +284,8 @@ sudo_pipe() { printf "%s\n" "\$REMOTE_SUDO_PASS" | sudo -S -p "" -- "\$@"; }
 cd "\${REMOTE_BASE}"
 if [[ -f Makefile ]]; then
   if [[ "\$REMOTE_ROLE" == "client" ]]; then
+    echo "[INFO] Arrêt du service avant compilation..."
+    sudo_pipe systemctl stop techtemp.service || true
     echo "[INFO] Compilation version enhanced pour client..."
     make enhanced -B -j"\$(nproc)"
     # Copier la version enhanced vers techtemp pour le service
@@ -292,6 +294,8 @@ if [[ -f Makefile ]]; then
       echo "[INFO] techtemp_enhanced -> techtemp"
     fi
   else
+    echo "[INFO] Arrêt du service avant compilation..."
+    sudo_pipe systemctl stop techtemp.service || true
     echo "[INFO] Compilation version standard pour serveur..."
     make -B -j"\$(nproc)"
   fi

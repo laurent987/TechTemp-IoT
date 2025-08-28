@@ -35,7 +35,8 @@ import {
   WarningIcon,
   MinusIcon,
   RepeatIcon,
-  InfoIcon
+  InfoIcon,
+  DownloadIcon
 } from '@chakra-ui/icons';
 
 const SystemMonitoring = () => {
@@ -76,6 +77,60 @@ const SystemMonitoring = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fonction pour déclencher une lecture immédiate
+  const triggerImmediateReading = async (sensorId = null) => {
+    if (!useRealTime) {
+      toast({
+        title: "Erreur",
+        description: "La lecture immédiate n'est disponible qu'en mode temps réel",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      const body = sensorId ? JSON.stringify({ sensor_id: sensorId }) : "{}";
+
+      const response = await fetch('http://192.168.0.42:8080/api/trigger-reading', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: body
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      toast({
+        title: "Lecture déclenchée",
+        description: `Commande envoyée avec succès ${sensorId ? `au capteur ${sensorId}` : 'à tous les capteurs'}`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      // Attendre 2 secondes puis actualiser pour voir les nouvelles données
+      setTimeout(() => {
+        fetchSystemHealth();
+      }, 2000);
+
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: `Impossible de déclencher la lecture: ${err.message}`,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -227,6 +282,19 @@ const SystemMonitoring = () => {
                 <Text display={{ base: "none", md: "block" }}>Actualiser</Text>
                 <Text display={{ base: "block", md: "none" }}>↻</Text>
               </Button>
+              {useRealTime && (
+                <Button
+                  size="sm"
+                  leftIcon={<DownloadIcon />}
+                  onClick={() => triggerImmediateReading()}
+                  colorScheme="green"
+                  variant="outline"
+                  fontSize={{ base: "xs", md: "sm" }}
+                >
+                  <Text display={{ base: "none", md: "block" }}>Lecture immédiate</Text>
+                  <Text display={{ base: "block", md: "none" }}>📡</Text>
+                </Button>
+              )}
             </HStack>
           </Flex>
         </Flex>
@@ -464,39 +532,6 @@ const SystemMonitoring = () => {
                 </CardBody>
               </Card>
             )}
-
-            <Card>
-              <CardHeader>
-                <Heading size="md">📊 Résumé Système</Heading>
-              </CardHeader>
-              <CardBody>
-                <Grid templateColumns={{ base: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} gap={4}>
-                  <Stat>
-                    <StatLabel>Total Devices</StatLabel>
-                    <StatNumber color="blue.600">
-                      {systemHealth.summary.total_devices}
-                    </StatNumber>
-                  </Stat>
-
-                  <Stat>
-                    <StatLabel>Devices Online</StatLabel>
-                    <StatNumber color="green.600">
-                      {systemHealth.summary.online}
-                    </StatNumber>
-                  </Stat>
-
-                  <Stat>
-                    <StatLabel>Lectures/Heure</StatLabel>
-                    <StatNumber color="purple.600">
-                      {useRealTime
-                        ? (systemHealth.devices?.reduce((sum, device) => sum + (device.readings_last_hour || 0), 0) || 0)
-                        : (systemHealth.data_flow?.readings_last_hour || 0)
-                      }
-                    </StatNumber>
-                  </Stat>
-                </Grid>
-              </CardBody>
-            </Card>
           </>
         )}
       </VStack>
