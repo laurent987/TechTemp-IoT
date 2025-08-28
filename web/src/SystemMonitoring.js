@@ -1,62 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Button,
   Alert,
   AlertIcon,
   Spinner,
   Text,
   VStack,
-  HStack,
-  Badge,
   Flex,
   useToast,
-  Grid,
-  GridItem,
-  Card,
-  CardBody,
-  CardHeader,
-  Heading,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Icon,
-  Tooltip
+  Heading
 } from '@chakra-ui/react';
-import {
-  CheckCircleIcon,
-  WarningIcon,
-  MinusIcon,
-  RepeatIcon,
-  InfoIcon,
-  DownloadIcon
-} from '@chakra-ui/icons';
+import { API_ENDPOINTS } from './utils/systemMonitoringHelpers';
+import { useDevicesData, useDeviceAlerts } from './hooks/useDevicesData';
+import { debugDeviceTimestamps } from './utils/debugTimestamps';
+import OverviewCard from './components/monitoring/OverviewCard';
+import DatabaseValidationCard from './components/monitoring/DatabaseValidationCard';
+import DevicesGrid from './components/monitoring/DevicesGrid';
+import AlertsCard from './components/monitoring/AlertsCard';
 
 const SystemMonitoring = () => {
   const [systemHealth, setSystemHealth] = useState(null);
+  const [firebaseData, setFirebaseData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [useRealTime, setUseRealTime] = useState(false);
+  const [useRealTime, setUseRealTime] = useState(true);
+  const [readingInProgress, setReadingInProgress] = useState(new Set());
+  const [updatedDevices, setUpdatedDevices] = useState(new Set());
   const toast = useToast();
 
-  const fetchSystemHealth = async () => {
+  // Utiliser notre hook personnalisé pour traiter les données des devices
+  const devicesData = useDevicesData(systemHealth?.devices, useRealTime);
+  const deviceAlerts = useDeviceAlerts(devicesData.devices);
+
+  // Debug des timestamps quand les données changent
+  useEffect(() => {
+    if (systemHealth?.devices && process.env.NODE_ENV === 'development') {
+      console.log('🔍 Debug automatique des timestamps:');
+      debugDeviceTimestamps(systemHealth.devices);
+    }
+  }, [systemHealth?.devices]);
+
+  const fetchSystemHealth = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Choisir entre API temps réel local ou Firebase
-      const apiUrl = useRealTime
-        ? 'http://192.168.0.42:8080/api/system/health'
-        : 'https://us-central1-techtemp-49c7f.cloudfunctions.net/getSystemHealth';
-
+      const apiUrl = useRealTime ? API_ENDPOINTS.LOCAL_HEALTH : API_ENDPOINTS.FIREBASE_HEALTH;
       const response = await fetch(apiUrl);
 
       if (!response.ok) {
@@ -65,7 +54,6 @@ const SystemMonitoring = () => {
 
       const data = await response.json();
       setSystemHealth(data);
-
     } catch (err) {
       setError(err.message);
       toast({
@@ -78,10 +66,36 @@ const SystemMonitoring = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [useRealTime, toast]);
 
-  // Fonction pour déclencher une lecture immédiate
-  const triggerImmediateReading = async (sensorId = null) => {
+  const fetchFirebaseData = useCallback(async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.FIREBASE_HEALTH);
+      if (!response.ok) {
+        console.warn('Impossible de récupérer les données Firebase pour validation');
+        return;
+      }
+      const data = await response.json();
+      setFirebaseData(data);
+    } catch (err) {
+      console.warn('Erreur lors de la récupération des données Firebase:', err.message);
+    }
+  }, []);
+
+  const markDeviceAsUpdated = useCallback((deviceIds) => {
+    const ids = Array.isArray(deviceIds) ? deviceIds : [deviceIds];
+    setUpdatedDevices(prev => new Set([...prev, ...ids]));
+
+    setTimeout(() => {
+      setUpdatedDevices(prev => {
+        const newSet = new Set(prev);
+        ids.forEach(id => newSet.delete(id));
+        return newSet;
+      });
+    }, 3000);
+  }, []);
+
+  const triggerImmediateReading = useCallback(async (sensorId = null) => {
     if (!useRealTime) {
       toast({
         title: "Erreur",
@@ -93,22 +107,20 @@ const SystemMonitoring = () => {
       return;
     }
 
+    const readingKey = sensorId || 'all';
+    setReadingInProgress(prev => new Set([...prev, readingKey]));
+
     try {
       const body = sensorId ? JSON.stringify({ sensor_id: sensorId }) : "{}";
-
-      const response = await fetch('http://192.168.0.42:8080/api/trigger-reading', {
+      const response = await fetch(API_ENDPOINTS.TRIGGER_READING, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: body
       });
 
       if (!response.ok) {
         throw new Error(`Erreur ${response.status}: ${response.statusText}`);
       }
-
-      const data = await response.json();
 
       toast({
         title: "Lecture déclenchée",
@@ -118,12 +130,27 @@ const SystemMonitoring = () => {
         isClosable: true,
       });
 
-      // Attendre 2 secondes puis actualiser pour voir les nouvelles données
       setTimeout(() => {
+        if (sensorId) {
+          markDeviceAsUpdated(sensorId);
+        } else if (systemHealth?.devices) {
+          const allDeviceIds = systemHealth.devices.map(d => d.sensor_id);
+          markDeviceAsUpdated(allDeviceIds);
+        }
         fetchSystemHealth();
+        setReadingInProgress(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(readingKey);
+          return newSet;
+        });
       }, 2000);
-
     } catch (err) {
+      setReadingInProgress(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(readingKey);
+        return newSet;
+      });
+
       toast({
         title: "Erreur",
         description: `Impossible de déclencher la lecture: ${err.message}`,
@@ -132,73 +159,16 @@ const SystemMonitoring = () => {
         isClosable: true,
       });
     }
-  };
+  }, [useRealTime, systemHealth, toast, fetchSystemHealth, markDeviceAsUpdated]);
 
-  // Auto-refresh avec dépendance sur useRealTime
+  const handleToggleRealTime = useCallback(() => {
+    setUseRealTime(!useRealTime);
+  }, [useRealTime]);
+
   useEffect(() => {
     fetchSystemHealth();
-
-    let interval;
-    if (autoRefresh) {
-      // Refresh plus fréquent pour l'API locale (5s vs 30s)
-      const refreshInterval = useRealTime ? 5000 : 30000;
-      interval = setInterval(fetchSystemHealth, refreshInterval);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoRefresh, useRealTime]);
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'healthy': return 'green';
-      case 'online': return 'green';  // Online = vert comme healthy
-      case 'warning': return 'yellow';
-      case 'critical': return 'red';
-      default: return 'gray';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'healthy': return CheckCircleIcon;
-      case 'online': return CheckCircleIcon;  // Online = icône check verte
-      case 'warning': return WarningIcon;
-      case 'critical': return MinusIcon;
-      default: return InfoIcon;
-    }
-  };
-
-  const formatLastSeen = (timestamp) => {
-    // Détecter si c'est un timestamp Unix (en secondes) ou une chaîne ISO
-    let date;
-    if (typeof timestamp === 'number') {
-      // Timestamp Unix en secondes -> convertir en millisecondes
-      date = new Date(timestamp * 1000);
-    } else {
-      // Chaîne ISO ou timestamp en millisecondes
-      date = new Date(timestamp);
-    }
-    return date.toLocaleString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-
-  const getMinutesSinceLastReading = (lastSeen) => {
-    const now = new Date();
-    let lastSeenDate;
-    if (typeof lastSeen === 'number') {
-      // Timestamp Unix en secondes -> convertir en millisecondes
-      lastSeenDate = new Date(lastSeen * 1000);
-    } else {
-      // Chaîne ISO ou timestamp en millisecondes
-      lastSeenDate = new Date(lastSeen);
-    }
-    return Math.round((now - lastSeenDate) / (1000 * 60));
-  };
+    fetchFirebaseData();
+  }, [fetchSystemHealth, fetchFirebaseData]);
 
   if (loading && !systemHealth) {
     return (
@@ -224,79 +194,6 @@ const SystemMonitoring = () => {
           <Heading size="lg" color="blue.600">
             🖥️ Monitoring Système IoT
           </Heading>
-          <Flex
-            direction={{ base: "column", md: "row" }}
-            gap={4}
-            align={{ md: "center" }}
-          >
-            <HStack spacing={2} flexWrap="wrap">
-              <Text fontSize="sm" color="gray.600" flexShrink={0}>
-                Source:
-              </Text>
-              <Badge colorScheme={useRealTime ? "green" : "blue"}>
-                {useRealTime ? "Temps Réel" : "Firebase"}
-              </Badge>
-              <Button
-                size="sm"
-                variant={useRealTime ? "solid" : "outline"}
-                colorScheme="green"
-                onClick={() => setUseRealTime(!useRealTime)}
-                fontSize={{ base: "xs", md: "sm" }}
-              >
-                {useRealTime ? "🚀 Temps Réel" : "☁️ Firebase"}
-              </Button>
-            </HStack>
-
-            <HStack spacing={2} flexWrap="wrap">
-              <VStack spacing={0} align="start">
-                <HStack spacing={1}>
-                  <Text fontSize="sm" color="gray.600" flexShrink={0}>
-                    Auto-refresh:
-                  </Text>
-                  <Badge colorScheme={autoRefresh ? "green" : "gray"}>
-                    {autoRefresh ? "ON" : "OFF"}
-                  </Badge>
-                </HStack>
-                <Text fontSize="xs" color="gray.500">
-                  {useRealTime ? "5s" : "30s"}
-                </Text>
-              </VStack>
-              <Button
-                size="sm"
-                variant={autoRefresh ? "solid" : "outline"}
-                colorScheme="blue"
-                onClick={() => setAutoRefresh(!autoRefresh)}
-                fontSize={{ base: "xs", md: "sm" }}
-              >
-                {autoRefresh ? "Pause" : "Start"}
-              </Button>
-              <Button
-                size="sm"
-                leftIcon={<RepeatIcon />}
-                onClick={fetchSystemHealth}
-                isLoading={loading}
-                colorScheme="blue"
-                variant="outline"
-                fontSize={{ base: "xs", md: "sm" }}
-              >
-                <Text display={{ base: "none", md: "block" }}>Actualiser</Text>
-                <Text display={{ base: "block", md: "none" }}>↻</Text>
-              </Button>
-              {useRealTime && (
-                <Button
-                  size="sm"
-                  leftIcon={<DownloadIcon />}
-                  onClick={() => triggerImmediateReading()}
-                  colorScheme="green"
-                  variant="outline"
-                  fontSize={{ base: "xs", md: "sm" }}
-                >
-                  <Text display={{ base: "none", md: "block" }}>Lecture immédiate</Text>
-                  <Text display={{ base: "block", md: "none" }}>📡</Text>
-                </Button>
-              )}
-            </HStack>
-          </Flex>
         </Flex>
 
         {error && (
@@ -308,230 +205,17 @@ const SystemMonitoring = () => {
 
         {systemHealth && (
           <>
-            {/* Vue d'ensemble */}
-            <Card>
-              <CardHeader>
-                <Heading size="md">Vue d'ensemble</Heading>
-                <Text fontSize="sm" color="gray.600">
-                  Dernière mise à jour: {new Date().toLocaleString('fr-FR')}
-                </Text>
-              </CardHeader>
-              <CardBody>
-                <Grid templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={6}>
-                  <GridItem>
-                    <Stat>
-                      <StatLabel>Statut Global</StatLabel>
-                      <HStack>
-                        <Icon
-                          as={getStatusIcon(systemHealth.global_status)}
-                          color={`${getStatusColor(systemHealth.global_status)}.500`}
-                        />
-                        <StatNumber
-                          color={`${getStatusColor(systemHealth.global_status)}.600`}
-                          textTransform="capitalize"
-                        >
-                          {systemHealth.global_status}
-                        </StatNumber>
-                      </HStack>
-                    </Stat>
-                  </GridItem>
-
-                  <GridItem>
-                    <Stat>
-                      <StatLabel>Devices Online</StatLabel>
-                      <StatNumber color="blue.600">
-                        {systemHealth.summary.online} / {systemHealth.summary.total_devices}
-                      </StatNumber>
-                      <StatHelpText>devices connectés</StatHelpText>
-                    </Stat>
-                  </GridItem>
-
-                  <GridItem>
-                    <Stat>
-                      <StatLabel>Lectures/Heure</StatLabel>
-                      <StatNumber color="green.600">
-                        {useRealTime
-                          ? (systemHealth.devices?.reduce((sum, device) => sum + (device.readings_last_hour || 0), 0) || 0)
-                          : (systemHealth.data_flow?.readings_last_hour || 0)
-                        }
-                      </StatNumber>
-                      <StatHelpText>{useRealTime ? "temps réel (total)" : "dernière heure"}</StatHelpText>
-                    </Stat>
-                  </GridItem>
-
-                  <GridItem>
-                    <Stat>
-                      <StatLabel>Alertes</StatLabel>
-                      <StatNumber color={(systemHealth.alerts?.length || 0) > 0 ? "red.600" : "green.600"}>
-                        {systemHealth.alerts?.length || 0}
-                      </StatNumber>
-                      <StatHelpText>problèmes détectés</StatHelpText>
-                    </Stat>
-                  </GridItem>
-                </Grid>
-
-                {/* Résumé des statuts */}
-                <HStack spacing={4} mt={4}>
-                  <Badge colorScheme="green">
-                    ✅ {systemHealth.summary.online} Online
-                  </Badge>
-                  {systemHealth.summary.total_devices - systemHealth.summary.online > 0 && (
-                    <Badge colorScheme="red">
-                      🔴 {systemHealth.summary.total_devices - systemHealth.summary.online} Offline
-                    </Badge>
-                  )}
-                  {(systemHealth.alerts?.length || 0) > 0 && (
-                    <Badge colorScheme="yellow">
-                      ⚠️ {systemHealth.alerts?.length || 0} Alertes
-                    </Badge>
-                  )}
-                </HStack>
-              </CardBody>
-            </Card>
-
-            {/* Cartes des devices - Une carte par room */}
-            <Box>
-              <Heading size="md" mb={4}>État des Devices</Heading>
-              <Badge colorScheme={useRealTime ? "green" : "blue"} variant="subtle" mb={4}>
-                {useRealTime ? "📡 Temps Réel - Dernières valeurs mesurées" : "📊 Firebase - Moyennes sur 1 heure"}
-              </Badge>
-
-              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", xl: "repeat(3, 1fr)" }} gap={{ base: 4, md: 6 }}>
-                {systemHealth.devices
-                  .sort((a, b) => a.sensor_id - b.sensor_id)
-                  .map((device) => (
-                    <Card key={device.sensor_id} variant="outline" bg="white" overflow="hidden">
-                      {/* Header simplifié avec juste le nom et status */}
-                      <CardHeader bg="blue.50" py={3}>
-                        <Flex justify="space-between" align="center">
-                          <Heading size="lg" color="blue.700" fontWeight="600">
-                            {device.room_name}
-                          </Heading>
-                          <HStack spacing={2}>
-                            <Icon
-                              as={getStatusIcon(device.status)}
-                              color={`${getStatusColor(device.status)}.500`}
-                              boxSize={4}
-                            />
-                            <Text fontSize="sm" fontWeight="medium" color={`${getStatusColor(device.status)}.600`} textTransform="capitalize">
-                              {device.status}
-                            </Text>
-                          </HStack>
-                        </Flex>
-                      </CardHeader>
-
-                      <CardBody p={{ base: 3, md: 4 }}>
-                        <VStack spacing={{ base: 3, md: 4 }} align="stretch">
-                          {/* Conteneur principal pour stats temp/humidité */}
-                          <Box py={{ base: 3, md: 4 }}>
-                            <Grid templateColumns="repeat(2, 1fr)" gap={{ base: 3, md: 6 }}>
-                              {/* Température */}
-                              <VStack spacing={2}>
-                                <HStack spacing={2} align="baseline">
-                                  <Text fontSize={{ base: "xl", md: "3xl" }}>🌡️</Text>
-                                  <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="bold" color="red.500" fontFamily="mono">
-                                    {useRealTime
-                                      ? device.last_temperature?.toFixed(1)
-                                      : device.avg_temperature?.toFixed(1)
-                                    }
-                                  </Text>
-                                  <Text fontSize={{ base: "lg", md: "xl" }} color="red.400" fontWeight="medium">°C</Text>
-                                </HStack>
-                              </VStack>
-
-                              {/* Humidité */}
-                              <VStack spacing={2}>
-                                <HStack spacing={2} align="baseline">
-                                  <Text fontSize={{ base: "xl", md: "3xl" }}>💧</Text>
-                                  <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="bold" color="blue.500" fontFamily="mono">
-                                    {useRealTime
-                                      ? device.last_humidity?.toFixed(0)
-                                      : device.avg_humidity?.toFixed(1)
-                                    }
-                                  </Text>
-                                  <Text fontSize={{ base: "lg", md: "xl" }} color="blue.400" fontWeight="medium">%</Text>
-                                </HStack>
-                              </VStack>
-                            </Grid>
-                          </Box>
-
-                          {/* Informations techniques compactes */}
-                          <Grid templateColumns="repeat(3, 1fr)" gap={{ base: 2, md: 3 }}>
-                            {/* Device info */}
-                            <VStack spacing={1} align="center" p={{ base: 1.5, md: 2 }} bg="gray.50" borderRadius="md">
-                              <Text fontSize="xs" color="gray.500" fontWeight="medium">DEVICE</Text>
-                              <Badge colorScheme="blue" variant="solid" fontSize="xs">
-                                {device.sensor_id}
-                              </Badge>
-                            </VStack>
-
-                            {/* Room info */}
-                            <VStack spacing={1} align="center" p={{ base: 1.5, md: 2 }} bg="gray.50" borderRadius="md">
-                              <Text fontSize="xs" color="gray.500" fontWeight="medium">ROOM</Text>
-                              <Badge colorScheme="orange" variant="solid" fontSize="xs">
-                                {device.room_id}
-                              </Badge>
-                            </VStack>
-
-                            {/* Lectures */}
-                            <VStack spacing={1} align="center" p={{ base: 1.5, md: 2 }} bg="gray.50" borderRadius="md">
-                              <Text fontSize="xs" color="gray.500" fontWeight="medium">LECTURES</Text>
-                              <Badge
-                                colorScheme={(useRealTime ? device.readings_last_hour : device.recent_count) > 5 ? "green" : "yellow"}
-                                variant="solid"
-                                fontSize="xs"
-                              >
-                                {useRealTime ? device.readings_last_hour : device.recent_count}/h
-                              </Badge>
-                            </VStack>
-                          </Grid>
-
-                          {/* Footer avec dernière mise à jour */}
-                          <Box pt={2}>
-                            <Flex justify="space-between" align="center">
-                              <VStack spacing={0} align="start">
-                                <Text fontSize="xs" color="gray.500">Dernière donnée</Text>
-                                <Text fontSize="xs" fontFamily="mono" color="gray.700">
-                                  {formatLastSeen(device.last_seen)}
-                                </Text>
-                              </VStack>
-                              <VStack spacing={0} align="end">
-                                <Text fontSize="xs" color="gray.500">Il y a</Text>
-                                <Text fontSize="xs" fontWeight="medium" color="gray.700">
-                                  {getMinutesSinceLastReading(device.last_seen)} min
-                                </Text>
-                              </VStack>
-                            </Flex>
-                          </Box>
-                        </VStack>
-                      </CardBody>
-                    </Card>
-                  ))}
-              </Grid>
-            </Box>            {/* Alertes et Statistiques */}
-            {(systemHealth.alerts?.length || 0) > 0 && (
-              <Card>
-                <CardHeader>
-                  <Heading size="md">🚨 Alertes Système</Heading>
-                </CardHeader>
-                <CardBody>
-                  <VStack spacing={3} align="stretch">
-                    {(systemHealth.alerts || []).map((alert, index) => (
-                      <Alert key={index} status="warning">
-                        <AlertIcon />
-                        <VStack spacing={1} align="start">
-                          <Text fontWeight="bold">{alert.type}</Text>
-                          <Text fontSize="sm">{alert.message}</Text>
-                          <Text fontSize="xs" color="gray.600">
-                            Sensor: {alert.sensor_id} | Device: {alert.device}
-                          </Text>
-                        </VStack>
-                      </Alert>
-                    ))}
-                  </VStack>
-                </CardBody>
-              </Card>
-            )}
+            <OverviewCard systemHealth={systemHealth} />
+            <DatabaseValidationCard firebaseData={firebaseData} systemHealth={systemHealth} />
+            <DevicesGrid
+              devices={devicesData.devices}
+              useRealTime={useRealTime}
+              readingInProgress={readingInProgress}
+              updatedDevices={updatedDevices}
+              onTriggerReading={triggerImmediateReading}
+              onToggleRealTime={handleToggleRealTime}
+            />
+            <AlertsCard alerts={[...systemHealth.alerts || [], ...deviceAlerts]} />
           </>
         )}
       </VStack>
