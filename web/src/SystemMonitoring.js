@@ -17,6 +17,7 @@ import OverviewCard from './components/monitoring/OverviewCard';
 import DatabaseValidationCard from './components/monitoring/DatabaseValidationCard';
 import DevicesGrid from './components/monitoring/DevicesGrid';
 import AlertsCard from './components/monitoring/AlertsCard';
+// import AlertsTestingPanel from './components/testing/AlertsTestingPanel';
 
 const SystemMonitoring = () => {
   const [systemHealth, setSystemHealth] = useState(null);
@@ -26,11 +27,21 @@ const SystemMonitoring = () => {
   const [useRealTime, setUseRealTime] = useState(true);
   const [readingInProgress, setReadingInProgress] = useState(new Set());
   const [updatedDevices, setUpdatedDevices] = useState(new Set());
+  // const [testDevices, setTestDevices] = useState([]);
+  // const [isTestMode, setIsTestMode] = useState(false);
   const toast = useToast();
 
   // Utiliser notre hook personnalisé pour traiter les données des devices
+  // En mode test, utiliser les devices de test, sinon les vraies données
+  // const currentDevices = isTestMode ? testDevices : systemHealth?.devices;
   const devicesData = useDevicesData(systemHealth?.devices, useRealTime);
   const deviceAlerts = useDeviceAlerts(devicesData.devices);
+
+  // Gestionnaire pour les devices de test
+  // const handleTestDevicesChange = useCallback((devices) => {
+  //   setTestDevices(devices);
+  //   setIsTestMode(devices.length > 0);
+  // }, []);
 
   // Debug des timestamps quand les données changent
   useEffect(() => {
@@ -207,6 +218,14 @@ const SystemMonitoring = () => {
           <>
             <OverviewCard systemHealth={systemHealth} />
             <DatabaseValidationCard firebaseData={firebaseData} systemHealth={systemHealth} />
+
+            {/* Panneau de test des alertes (en mode développement) */}
+            {/* Temporairement désactivé pour résoudre les problèmes d'import
+            {process.env.NODE_ENV === 'development' && (
+              <AlertsTestingPanel onTestDevicesChange={handleTestDevicesChange} />
+            )}
+            */}
+
             <DevicesGrid
               devices={devicesData.devices}
               useRealTime={useRealTime}
