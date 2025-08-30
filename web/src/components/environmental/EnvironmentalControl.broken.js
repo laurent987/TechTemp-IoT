@@ -102,7 +102,7 @@ const EnvironmentalControl = () => {
     .filter(r => selectedRooms.includes(r.id))
     .map(r => r.name);
 
-  // Fonction wrapper pour convertir les noms en IDs
+    // Fonction wrapper pour convertir les noms en IDs
   const handleSelectedRoomsChange = useCallback((roomNames) => {
     const roomIds = rooms
       .filter(r => roomNames.includes(r.name))
@@ -112,13 +112,162 @@ const EnvironmentalControl = () => {
 
   // Chargement initial au montage du composant
   useEffect(() => {
-    console.log('🚀 EnvironmentalControl monté, démarrage fetchSystemHealth');
+    console.log('� EnvironmentalControl monté, démarrage fetchSystemHealth');
     fetchSystemHealth(null, 'useEffect-mount');
   }, [fetchSystemHealth]);
+
+  return (  // Fonction pour tester le temps réel en arrière-plan
+  const testRealTimeInBackground = useCallback(async () => {
+    try {
+      console.log('🔍 Test temps réel en arrière-plan...');
+
+      const response = await fetch(API_ENDPOINTS.LOCAL_HEALTH, {
+        timeout: 3000
+      });
+
+      if (response.ok) {
+        console.log('✅ Temps réel maintenant disponible !');
+        setRealTimeAvailable(true);
+        setFallbackToastShown(false); // Reset pour permettre future notification
+
+        toast({
+          title: "Temps réel disponible",
+          description: "Le serveur local est maintenant accessible. Vous pouvez basculer en temps réel.",
+          status: "success",
+          duration: 4000,
+          isClosable: true,
+        });
+      }
+    } catch (err) {
+      console.log('⏳ Temps réel toujours indisponible, nouveau test dans 30s...');
+      // Réessayer dans 30 secondes
+      setTimeout(() => {
+        if (!realTimeAvailable) { // Seulement si toujours pas dispo
+          testRealTimeInBackground();
+        }
+      }, 30000);
+    }
+  }, [toast, realTimeAvailable]);
+
+  const markDeviceAsUpdated = useCallback((deviceIds) => {
+    const ids = Array.isArray(deviceIds) ? deviceIds : [deviceIds];
+    setUpdatedDevices(prev => new Set([...prev, ...ids]));
+
+    setTimeout(() => {
+      setUpdatedDevices(prev => {
+        const newSet = new Set(prev);
+        ids.forEach(id => newSet.delete(id));
+        return newSet;
+      });
+    }, 3000);
+  }, []);
+
+  const triggerImmediateReading = useCallback(async (sensorId = null) => {
+    if (!useRealTimeForDevices) {
+      toast({
+        title: "Erreur",
+        description: "La lecture immédiate n'est disponible qu'en mode temps réel",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    const readingKey = sensorId || 'all';
+    setReadingInProgress(prev => new Set([...prev, readingKey]));
+
+    try {
+      const body = sensorId ? JSON.stringify({ sensor_id: sensorId }) : "{}";
+      const response = await fetch(API_ENDPOINTS.TRIGGER_READING, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+
+      toast({
+        title: "Lecture déclenchée",
+        description: `Nouvelle lecture ${sensorId ? `pour ${sensorId}` : 'globale'} en cours...`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      setTimeout(() => {
+        if (sensorId) {
+          markDeviceAsUpdated(sensorId);
+        } else if (systemHealth?.devices) {
+          const allDeviceIds = systemHealth.devices.map(d => d.sensor_id);
+          markDeviceAsUpdated(allDeviceIds);
+        }
+        fetchSystemHealth(null, 'cleanup-after-reading');
+        setReadingInProgress(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(readingKey);
+          return newSet;
+        });
+      }, 2000);
+    } catch (err) {
+      setReadingInProgress(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(readingKey);
+        return newSet;
+      });
+
+      toast({
+        title: "Erreur",
+        description: `Impossible de déclencher la lecture: ${err.message}`,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }, [useRealTimeForDevices, systemHealth, toast, fetchSystemHealth, markDeviceAsUpdated]);
+
+  const handleToggleDevicesRealTime = useCallback(() => {
+    const newRealTimeMode = !useRealTimeForDevices;
+
+    // Tentative de basculement vers le nouveau mode
+    if (newRealTimeMode) {
+      toast({
+        title: "Tentative de connexion temps réel...",
+        description: "Vérification de la disponibilité du serveur local",
+        status: "info",
+        duration: 2000,
+        isClosable: true,
+      });
+    }
+
+    setUseRealTimeForDevices(newRealTimeMode);
+
+    // Recharger avec le nouveau mode (avec fallback automatique si nécessaire)
+    fetchSystemHealth(newRealTimeMode, 'mode-change');
+  }, [useRealTimeForDevices, toast, fetchSystemHealth]);
+
+  // Chargement initial uniquement au montage du composant
+  useEffect(() => {
+    console.log('🚀 EnvironmentalControl monté, démarrage fetchSystemHealth');
+    // Chargement en arrière-plan, n'affecte pas l'affichage de la vue d'ensemble
+    fetchSystemHealth(null, 'useEffect-mount');
+  }, []); // Dépendances vides pour éviter la boucle
 
   return (
     <Box p={{ base: 0.5, md: 6 }} bg="gray.50" w="100%">
       <VStack spacing={{ base: 4, md: 5 }} align="stretch">
+
+        {/* Titre principal de la page (hors card) */}
+        {/* <VStack spacing={1} align="start">
+          <Heading size="xl" color="green.600">
+            Environmental Control
+          </Heading>
+          <Text fontSize="md" color="gray.600">
+            Surveillance et contrôle des conditions environnementales
+          </Text>
+        </VStack> */}
 
         {error && (
           <Alert status="error">
@@ -148,7 +297,7 @@ const EnvironmentalControl = () => {
                 </Text>
                 <Button
                   colorScheme="blue"
-                  onClick={refreshCurrentMode}
+                  onClick={fetchSystemHealth}
                   size="sm"
                 >
                   Réessayer
@@ -168,6 +317,7 @@ const EnvironmentalControl = () => {
         {/* Section 2: Graphiques & Tendances */}
         <Card>
           <CardBody>
+            {/* Graphiques */}
             <Box>
               <ReadingsChart
                 data={chartData}
@@ -237,17 +387,23 @@ const EnvironmentalControl = () => {
                 </HStack>
               </Flex>
 
-              <EnvironmentalDevicesGrid
-                devices={devicesData.devices}
-                environmentalAlerts={environmentalAlerts}
-                onTriggerReading={useRealTimeForDevices ? triggerImmediateReading : null}
-                readingInProgress={readingInProgress}
-                updatedDevices={updatedDevices}
-              />
+              {loading && !systemHealth ? (
+                <VStack spacing={4} align="center" py={8}>
+                  <Spinner size="lg" color="green.500" />
+                  <Text color="gray.600">Chargement des dispositifs...</Text>
+                </VStack>
+              ) : (
+                <EnvironmentalDevicesGrid
+                  devices={devicesData.devices}
+                  environmentalAlerts={environmentalAlerts}
+                  onTriggerReading={useRealTimeForDevices ? triggerImmediateReading : null}
+                  readingInProgress={readingInProgress}
+                  updatedDevices={updatedDevices}
+                />
+              )}
             </VStack>
           </CardBody>
-        </Card>
-      </VStack>
+        </Card>      </VStack>
     </Box>
   );
 };

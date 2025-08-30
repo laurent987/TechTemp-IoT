@@ -13,23 +13,24 @@ import {
   Box,
   Alert,
   AlertIcon,
-  Spinner,
-  useColorModeValue
+  Spinner
 } from '@chakra-ui/react';
 import { keyframes } from '@emotion/react';
 import { formatLastSeen } from '../../utils/systemMonitoringHelpers';
 
-// Animation pour les valeurs mises à jour
-const pulseAnimation = keyframes`
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7); }
-  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(72, 187, 120, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(72, 187, 120, 0); }
+// Animation pulse pour les valeurs pendant la lecture
+const pulseDuringReading = keyframes`
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 1; }
 `;
 
-// Animation pour la lecture en cours
-const shimmerAnimation = keyframes`
-  0% { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
+// Animation de satisfaction quand les nouvelles données arrivent
+const newDataPulse = keyframes`
+  0% { transform: scale(1); }
+  30% { transform: scale(1.08); }
+  60% { transform: scale(1.02); }
+  100% { transform: scale(1); }
 `;
 
 const EnvironmentalDevicesGrid = ({
@@ -156,64 +157,49 @@ const EnvironmentalDevicesGrid = ({
     return '🏠';
   };
 
-  // Composant pour les valeurs avec cadre coloré et animations (simplifié)
-  const ValueBox = ({ label, value, unit, isReading, isUpdated, icon }) => {
-    // Fonction pour formater correctement les valeurs
-    const formatValue = (val) => {
-      if (val === null || val === undefined) return 'N/A';
+  const formatValue = (val) => {
+    if (val === null || val === undefined) return 'N/A';
+    const numValue = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(numValue)) return 'N/A';
+    return numValue.toFixed(1);
+  };
 
-      // Convertir en nombre si c'est une chaîne
-      const numValue = typeof val === 'string' ? parseFloat(val) : val;
-
-      // Vérifier si c'est un nombre valide
-      if (isNaN(numValue)) return 'N/A';
-
-      // Arrondir à 1 décimale
-      return numValue.toFixed(1);
-    };
-
+  const ValueBox = ({ label, value, unit, isReading, isUpdated, icon, color = "gray.700", borderColor = "gray.200" }) => {
     return (
       <Box
         flex={1}
         p={4}
         borderRadius="lg"
-        borderWidth="1px"
-        borderColor="gray.200"
+        borderWidth="2px"
+        borderColor={borderColor}
         bg="white"
         position="relative"
         overflow="hidden"
-        transition="all 0.3s ease"
-        transform={isUpdated ? "scale(1.02)" : "scale(1)"}
-        animation={isUpdated ? `${pulseAnimation} 1s ease-out` : undefined}
         minH="120px"
         display="flex"
         alignItems="center"
         justifyContent="center"
-        _before={isReading ? {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: '-100%',
-          width: '100%',
-          height: '100%',
-          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-          animation: `${shimmerAnimation} 1.5s infinite`
-        } : undefined}
+        transition="all 0.2s ease"
       >
         <VStack spacing={2}>
-          <HStack justify="center">
-            <Text fontSize="lg">{icon}</Text>
-            <Text fontSize="md" fontWeight="medium" color="gray.600">
-              {label}
+          <HStack>
+            <Text fontSize="2xl">{icon}</Text>
+            <Text
+              fontSize="2xl"
+              fontWeight="bold"
+              color={color}
+              textAlign="center"
+              animation={isUpdated ? `${newDataPulse} 0.8s ease-out` : undefined}
+            >
+              {value !== null && value !== undefined ? (
+                `${formatValue(value)}${unit}`
+              ) : (
+                <Spinner size="md" color="blue.500" thickness="3px" />
+              )}
             </Text>
           </HStack>
-          <Text
-            fontSize="3xl"
-            fontWeight="bold"
-            color="gray.700"
-            textAlign="center"
-          >
-            {value !== null && value !== undefined ? `${formatValue(value)}${unit}` : 'N/A'}
+          <Text fontSize="xs" fontWeight="semibold" color="gray.600" textAlign="center">
+            {label}
           </Text>
         </VStack>
       </Box>
@@ -221,114 +207,169 @@ const EnvironmentalDevicesGrid = ({
   };
 
   return (
-    <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={6}>
-      {devices.map((device) => {
-        const deviceAlerts = getDeviceAlerts(device.sensor_id);
-        const isReading = readingInProgress.has(device.sensor_id) || readingInProgress.has('all');
-        const isUpdated = updatedDevices.has(device.sensor_id);
-        const hasAlerts = deviceAlerts.length > 0;
+    <>
+      <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={6}>
+        {devices.map((device) => {
+          const deviceAlerts = getDeviceAlerts(device.sensor_id);
+          const isReading = readingInProgress.has(device.sensor_id) || readingInProgress.has('all');
+          const isUpdated = updatedDevices.has(device.sensor_id);
+          const hasAlerts = deviceAlerts.length > 0;
 
-        return (
-          <Card
-            key={device.sensor_id}
-            variant={isUpdated ? "filled" : hasAlerts ? "outline" : "elevated"}
-            borderColor={hasAlerts ? "orange.300" : "gray.200"}
-            borderWidth={hasAlerts ? 2 : 1}
-            bg={isUpdated ? "green.50" : hasAlerts ? "orange.50" : "white"}
-          >
-            <CardHeader pb={3}>
-              <HStack justify="space-between">
-                <HStack>
-                  <Text fontSize="xl">{getRoomIcon(device.room_name)}</Text>
-                  <Heading size="xs" color="gray.700">{device.room_name}</Heading>
+          // Déterminer la couleur de bordure selon le niveau d'alerte le plus critique
+          const getCardStyle = () => {
+            if (hasAlerts) {
+              // Trouver le niveau d'alerte le plus critique
+              const hasError = deviceAlerts.some(alert => alert.level === 'error');
+              const hasWarning = deviceAlerts.some(alert => alert.level === 'warning');
+
+              let borderColor = "blue.300"; // info par défaut
+              if (hasError) borderColor = "red.400";
+              else if (hasWarning) borderColor = "orange.400";
+
+              return {
+                bg: "white", // Fond normal
+                borderColor: borderColor,
+                borderWidth: 2,
+                variant: "outline"
+              };
+            }
+            return {
+              bg: "white",
+              borderColor: "gray.200",
+              borderWidth: 2,
+              variant: "elevated"
+            };
+          };
+
+          const cardStyle = getCardStyle();
+
+          return (
+            <Card
+              key={device.sensor_id}
+              variant={cardStyle.variant}
+              borderColor={"gray.200"}
+              borderWidth={cardStyle.borderWidth}
+              bg={cardStyle.bg}
+              boxShadow={hasAlerts ? "lg" : "md"}
+              _hover={{ transform: "translateY(-2px)", boxShadow: "xl" }}
+              transition="all 0.2s ease"
+            >
+              <CardHeader pb={3}>
+                <HStack justify="space-between">
+                  <HStack>
+                    <Text fontSize="xl">{getRoomIcon(device.room_name)}</Text>
+                    <Heading size="md" color="gray.700">{device.room_name}</Heading>
+                  </HStack>
+                  {hasAlerts && (
+                    <Badge
+                      colorScheme={
+                        deviceAlerts.some(alert => alert.level === 'error') ? 'red' :
+                          deviceAlerts.some(alert => alert.level === 'warning') ? 'orange' :
+                            'gray'
+                      }
+                      variant="solid"
+                      fontSize="sm"
+                    >
+                      {deviceAlerts.length} alerte{deviceAlerts.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
                 </HStack>
-                {hasAlerts && (
-                  <Badge colorScheme="orange" variant="solid" fontSize="sm">
-                    {deviceAlerts.length} alerte{deviceAlerts.length > 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </HStack>
-            </CardHeader>
+              </CardHeader>
 
-            <CardBody pt={0}>
-              <VStack spacing={5} align="stretch">
+              <CardBody pt={5}>
+                <VStack spacing={5} align="stretch">
 
-                {/* Température et Humidité avec cadres épurés */}
-                <HStack spacing={4}>
-                  <ValueBox
-                    label="Température"
-                    value={device.temperature}
-                    unit="°C"
-                    isReading={isReading}
-                    isUpdated={isUpdated}
-                    icon="🌡️"
-                  />
+                  {/* Température et Humidité avec cadres épurés */}
+                  <HStack spacing={4}>
+                    {(() => {
+                      // Déterminer les couleurs de bordure selon les alertes
+                      const tempAlerts = deviceAlerts.filter(alert =>
+                        alert.type?.includes('Température')
+                      );
+                      const humidityAlerts = deviceAlerts.filter(alert =>
+                        alert.type?.includes('Humidité')
+                      );
 
-                  <ValueBox
-                    label="Humidité"
-                    value={device.humidity}
-                    unit="%"
-                    isReading={isReading}
-                    isUpdated={isUpdated}
-                    icon="💧"
-                  />
-                </HStack>
+                      const getTempBorderColor = () => {
+                        if (tempAlerts.some(a => a.level === 'error')) return 'red.400';
+                        if (tempAlerts.some(a => a.level === 'warning')) return 'orange.400';
+                        return 'gray.200';
+                      };
 
-                {/* Alertes spécifiques à cette pièce */}
-                {deviceAlerts.length > 0 && (
-                  <VStack spacing={2} align="stretch">
-                    {deviceAlerts.slice(0, 2).map((alert, index) => (
-                      <Alert key={index} status="warning" size="sm" borderRadius="md">
-                        <AlertIcon boxSize="12px" />
-                        <Text fontSize="xs">{alert.message}</Text>
-                      </Alert>
-                    ))}
-                    {deviceAlerts.length > 2 && (
-                      <Text fontSize="xs" color="gray.600" textAlign="center">
-                        +{deviceAlerts.length - 2} autre(s) alerte(s)
-                      </Text>
-                    )}
-                  </VStack>
-                )}
+                      const getHumidityBorderColor = () => {
+                        if (humidityAlerts.some(a => a.level === 'error')) return 'red.400';
+                        if (humidityAlerts.some(a => a.level === 'warning')) return 'orange.400';
+                        return 'gray.200';
+                      };
 
-                {/* Footer avec infos temporelles - au-dessus du bouton */}
-                <HStack justify="space-between" pt={2} borderTop="1px" borderColor="gray.100">
-                  <Text fontSize="sm" color="gray.500">
-                    Dernière lecture : {getLastSeenTime(device.last_seen)}
-                  </Text>
-                  <Text fontSize="sm" color="gray.500" fontWeight="medium">
-                    {getMinutesSinceLastSeen(device.last_seen)}
-                  </Text>
-                </HStack>
+                      return (
+                        <>
+                          <ValueBox
+                            label="Température"
+                            value={device.temperature}
+                            unit="°C"
+                            isReading={isReading}
+                            isUpdated={isUpdated}
+                            icon="🌡️"
+                            color="red.500"
+                            borderColor={getTempBorderColor()}
+                          />
 
-                {/* Action de lecture avec animation - toujours en bas */}
-                <Button
-                  size="lg"
-                  colorScheme={hasAlerts ? "orange" : "blue"}
-                  variant={hasAlerts ? "solid" : "outline"}
-                  leftIcon={isReading ? <Spinner size="sm" /> : undefined}
-                  onClick={() => onTriggerReading(device.sensor_id)}
-                  isLoading={isReading}
-                  loadingText="Lecture en cours..."
-                  transform={isUpdated ? "scale(1.02)" : "scale(1)"}
-                  transition="all 0.2s ease"
-                  _hover={{
-                    transform: "scale(1.05)",
-                    boxShadow: "lg"
-                  }}
-                  _active={{
-                    transform: "scale(0.98)"
-                  }}
-                  animation={isReading ? `${shimmerAnimation} 2s infinite` : undefined}
-                >
-                  {hasAlerts ? '🔄 Vérifier maintenant' : '📊 Nouvelle lecture'}
-                </Button>
-              </VStack>
-            </CardBody>
-          </Card>
-        );
-      })}
-    </Grid>
+                          <ValueBox
+                            label="Humidité"
+                            value={device.humidity}
+                            unit="%"
+                            isReading={isReading}
+                            isUpdated={isUpdated}
+                            icon="💧"
+                            color="blue.500"
+                            borderColor={getHumidityBorderColor()}
+                          />
+                        </>
+                      );
+                    })()}
+                  </HStack>
+
+                  {/* Action de lecture - seulement si onTriggerReading est fourni */}
+                  {onTriggerReading && (
+                    <Button
+                      size="lg"
+                      colorScheme="blue"
+                      variant="outline"
+                      leftIcon={isReading ? <Spinner size="sm" /> : undefined}
+                      onClick={() => onTriggerReading(device.sensor_id)}
+                      isLoading={isReading}
+                      loadingText="Lecture en cours..."
+                      _hover={{
+                        transform: "scale(1.05)",
+                        boxShadow: "lg"
+                      }}
+                      _active={{
+                        transform: "scale(0.98)"
+                      }}
+                    >
+                      📡 Faire une mesure
+                    </Button>
+                  )}
+
+                  {/* Footer avec infos temporelles - au-dessus du bouton */}
+                  <HStack justify="space-between" pt={2}>
+                    <Text fontSize="sm" color="gray.500">
+                      Dernière mesure : {getLastSeenTime(device.last_seen)}
+                    </Text>
+                    <Text fontSize="sm" color="gray.500" fontWeight="medium">
+                      {getMinutesSinceLastSeen(device.last_seen)}
+                    </Text>
+                  </HStack>
+                </VStack>
+              </CardBody>
+            </Card>
+          );
+        })}
+      </Grid>
+      {/* Espace en bas pour permettre de scroller plus haut */}
+      <Box h="200px" />
+    </>
   );
 };
 
