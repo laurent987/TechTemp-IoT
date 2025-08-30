@@ -33,6 +33,7 @@ const EnvironmentalControl = () => {
   const [useRealTimeForDevices, setUseRealTimeForDevices] = useState(true); // Remettre temps réel par défaut
   const [realTimeAvailable, setRealTimeAvailable] = useState(true); // Track si temps réel dispo
   const [fallbackToastShown, setFallbackToastShown] = useState(false); // Éviter doubles toasts
+  const [testingRealTime, setTestingRealTime] = useState(false); // État spécifique pour le test temps réel
   const [readingInProgress, setReadingInProgress] = useState(new Set());
   const [updatedDevices, setUpdatedDevices] = useState(new Set());
   const fetchInProgress = useRef(false); // Protection contre appels multiples
@@ -255,6 +256,61 @@ const EnvironmentalControl = () => {
 
     setLoading(false);
     fetchInProgress.current = false; // Libérer le verrou
+  }, [toast]);
+
+  // Fonction d'actualisation simple qui respecte le mode actuel
+  const refreshCurrentMode = useCallback(async () => {
+    console.log(`🔄 Actualisation simple en mode: ${useRealTimeForDevices ? 'temps réel' : 'Firebase'}`);
+
+    if (useRealTimeForDevices) {
+      // Mode temps réel : essayer une fois, fallback vers Firebase si échec
+      fetchSystemHealth(true, 'refresh-current-mode');
+    } else {
+      // Mode Firebase : actualisation directe Firebase uniquement
+      fetchSystemHealth(false, 'refresh-firebase-only');
+    }
+  }, [useRealTimeForDevices, fetchSystemHealth]);
+
+  // Fonction de test temps réel sans impact sur l'interface
+  const testRealTimeConnection = useCallback(async () => {
+    setTestingRealTime(true);
+
+    try {
+      console.log('🔍 Test de connexion temps réel...');
+
+      const response = await fetch(API_ENDPOINTS.LOCAL_HEALTH, {
+        timeout: 3000
+      });
+
+      if (response.ok) {
+        console.log('✅ Temps réel disponible !');
+        setRealTimeAvailable(true);
+        setFallbackToastShown(false);
+
+        toast({
+          title: "Connexion temps réel réussie",
+          description: "Le serveur local est accessible. Vous pouvez maintenant utiliser le mode temps réel.",
+          status: "success",
+          duration: 4000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error('Serveur local non accessible');
+      }
+    } catch (err) {
+      console.log('⏳ Temps réel toujours indisponible:', err.message);
+      setRealTimeAvailable(false);
+
+      toast({
+        title: "Temps réel indisponible",
+        description: "Le serveur local n'est pas accessible. Continuez avec Firebase.",
+        status: "warning",
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setTestingRealTime(false);
+    }
   }, [toast]);
 
   // Fonction pour tester le temps réel en arrière-plan
@@ -489,7 +545,7 @@ const EnvironmentalControl = () => {
                     size="sm"
                     colorScheme="blue"
                     variant="outline"
-                    onClick={() => fetchSystemHealth(null, 'refresh-button')}
+                    onClick={refreshCurrentMode}
                     isLoading={loading}
                     leftIcon={<RepeatIcon />}
                   >
@@ -500,12 +556,9 @@ const EnvironmentalControl = () => {
                       size="sm"
                       colorScheme="orange"
                       variant="outline"
-                      onClick={() => {
-                        setRealTimeAvailable(true);
-                        setFallbackToastShown(false); // Reset pour permettre future notification
-                        fetchSystemHealth(true, 'reconnect-button');
-                      }}
-                      isLoading={loading}
+                      onClick={testRealTimeConnection}
+                      isLoading={testingRealTime}
+                      loadingText="Test en cours..."
                     >
                       Tester temps réel
                     </Button>
