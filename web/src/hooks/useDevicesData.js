@@ -1,6 +1,109 @@
 import { useMemo } from 'react';
-import { transformDevicesData, validateDeviceData, getDeviceWithDefaults } from '../utils/deviceDataTransformer';
-import { getHoursSinceTimestamp } from '../utils/systemMonitoringHelpers';
+
+/**
+ * Calcule la différence en heures entre maintenant et un timestamp
+ * @param {number|string} timestamp - Timestamp à comparer
+ * @returns {number|null} Différence en heures, ou null si invalide
+ */
+const getHoursSinceTimestamp = (timestamp) => {
+  if (!timestamp) return null;
+
+  let date;
+  if (typeof timestamp === 'number') {
+    // Timestamp Unix (secondes) - convertir en millisecondes
+    date = new Date(timestamp * 1000);
+  } else {
+    // Format string (ISO)
+    date = new Date(timestamp);
+  }
+
+  // Vérifier que la date est valide
+  if (isNaN(date.getTime())) {
+    console.warn(`Timestamp invalide:`, timestamp);
+    return null;
+  }
+
+  const now = new Date();
+  return (now - date) / (1000 * 60 * 60);
+};
+
+/**
+ * Transforme les données du device pour uniformiser les champs selon le mode
+ * @param {Object} device - Les données brutes du device
+ * @param {boolean} useRealTime - Mode temps réel (true) ou Firebase (false)
+ * @returns {Object} Device avec des champs uniformisés
+ */
+const transformDeviceData = (device, useRealTime) => {
+  // Déterminer quels champs utiliser selon le mode
+  let temperature, humidity;
+
+  if (useRealTime) {
+    // Mode temps réel : utiliser last_temperature/last_humidity
+    temperature = device.last_temperature;
+    humidity = device.last_humidity;
+  } else {
+    // Mode Firebase : utiliser avg_temperature/avg_humidity
+    temperature = device.avg_temperature;
+    humidity = device.avg_humidity;
+  }
+
+  return {
+    ...device,
+    temperature: temperature,
+    humidity: humidity,
+    temperaturePrecision: useRealTime ? 1 : 1,
+    humidityPrecision: useRealTime ? 0 : 1,
+    _original: {
+      last_temperature: device.last_temperature,
+      avg_temperature: device.avg_temperature,
+      last_humidity: device.last_humidity,
+      avg_humidity: device.avg_humidity
+    }
+  };
+};
+
+/**
+ * Transforme une liste de devices
+ * @param {Array} devices - Liste des devices
+ * @param {boolean} useRealTime - Mode temps réel ou Firebase
+ * @returns {Array} Liste des devices transformés
+ */
+const transformDevicesData = (devices, useRealTime) => {
+  if (!devices || !Array.isArray(devices)) {
+    return [];
+  }
+  return devices.map(device => transformDeviceData(device, useRealTime));
+};
+
+/**
+ * Valide qu'un device a les champs requis
+ * @param {Object} device - Device à valider
+ * @returns {boolean} True si le device est valide
+ */
+const validateDeviceData = (device) => {
+  const requiredFields = ['sensor_id', 'room_name', 'room_id', 'status', 'last_seen'];
+  return requiredFields.every(field => device && device[field] !== undefined);
+};
+
+/**
+ * Obtient un device avec des valeurs par défaut si certains champs manquent
+ * @param {Object} device - Device potentiellement incomplet
+ * @returns {Object} Device avec des valeurs par défaut
+ */
+const getDeviceWithDefaults = (device) => {
+  return {
+    sensor_id: device.sensor_id || 'unknown',
+    room_name: device.room_name || 'Salle inconnue',
+    room_id: device.room_id || 'N/A',
+    status: device.status || 'unknown',
+    last_seen: device.last_seen || new Date().toISOString(),
+    temperature: device.temperature ?? null,
+    humidity: device.humidity ?? null,
+    temperaturePrecision: device.temperaturePrecision || 1,
+    humidityPrecision: device.humidityPrecision || 1,
+    ...device
+  };
+};
 
 /**
  * Hook personnalisé pour gérer les données des devices
@@ -41,18 +144,29 @@ export const useDevicesData = (rawDevices, useRealTime) => {
     // Transformer les données valides
     const transformedDevices = transformDevicesData(validDevices, useRealTime);
 
+    // Trier les devices pour maintenir un ordre cohérent
+    // Tri par room_name puis par sensor_id pour assurer la cohérence
+    const sortedDevices = transformedDevices.sort((a, b) => {
+      // D'abord trier par nom de pièce
+      const roomComparison = (a.room_name || '').localeCompare(b.room_name || '');
+      if (roomComparison !== 0) return roomComparison;
+
+      // Ensuite par sensor_id si même pièce
+      return (a.sensor_id || 0) - (b.sensor_id || 0);
+    });
+
     // Calculer les statistiques
-    const onlineDevices = transformedDevices.filter(d => d.status === 'online' || d.status === 'healthy');
+    const onlineDevices = sortedDevices.filter(d => d.status === 'online' || d.status === 'healthy');
     const stats = {
-      total: transformedDevices.length,
+      total: sortedDevices.length,
       valid: validDevices.length,
       invalid: invalidDevices.length,
       online: onlineDevices.length,
-      offline: transformedDevices.length - onlineDevices.length
+      offline: sortedDevices.length - onlineDevices.length
     };
 
     return {
-      devices: transformedDevices,
+      devices: sortedDevices,
       validDevices,
       invalidDevices,
       stats
@@ -170,7 +284,7 @@ export const useDeviceAlerts = (devices) => {
             room_name: device.room_name,
             message: `Température critique: ${device.temperature}°C`
           });
-        } else if (device.temperature > 28) {
+        } else if (device.temperature > 26) {
           alerts.push({
             type: 'Température Élevée',
             level: 'warning',
@@ -186,7 +300,7 @@ export const useDeviceAlerts = (devices) => {
             room_name: device.room_name,
             message: `Température critique: ${device.temperature}°C`
           });
-        } else if (device.temperature < 15) {
+        } else if (device.temperature < 18) {
           alerts.push({
             type: 'Température Basse',
             level: 'warning',
@@ -207,7 +321,7 @@ export const useDeviceAlerts = (devices) => {
             room_name: device.room_name,
             message: `Humidité critique: ${device.humidity}% (risque de moisissure)`
           });
-        } else if (device.humidity > 70) {
+        } else if (device.humidity > 66) {
           alerts.push({
             type: 'Humidité Élevée',
             level: 'warning',

@@ -142,7 +142,29 @@ async function networkFirstStrategy(request) {
       return cachedResponse;
     }
 
-    throw error;
+    // Créer une réponse de fallback au lieu de throw
+    console.log('[SW] No cache available for:', request.url);
+
+    // Pour les requêtes API, retourner une réponse JSON d'erreur
+    if (request.url.includes('/api/') || request.url.includes(':5000')) {
+      return new Response(
+        JSON.stringify({
+          error: 'Network unavailable',
+          message: 'Service temporarily unavailable. Please check your connection.'
+        }),
+        {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Pour les autres ressources, retourner la page offline
+    return caches.match('/offline.html') || new Response('Service unavailable', {
+      status: 503,
+      statusText: 'Service Unavailable'
+    });
   }
 }
 
@@ -161,7 +183,12 @@ async function cacheFirstStrategy(request) {
     return response;
   } catch (error) {
     console.error('[SW] Cache et network failed pour:', request.url);
-    throw error;
+
+    // Retourner une réponse de fallback au lieu de throw
+    return new Response('Resource unavailable offline', {
+      status: 503,
+      statusText: 'Service Unavailable'
+    });
   }
 }
 

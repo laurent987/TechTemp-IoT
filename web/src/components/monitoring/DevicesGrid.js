@@ -34,7 +34,7 @@ const DevicesGrid = ({
           <Flex align="center" gap={3} wrap="wrap">
             <Heading size="md">État des Devices</Heading>
             <Badge colorScheme={useRealTime ? "green" : "blue"} variant="subtle" fontSize="sm">
-              {useRealTime ? "📡 Temps Réel - Valeurs directement mesurées" : "☁️ Firebase - Moyennes sur 1 heure"}
+              {useRealTime ? "📡 Temps Réel" : "☁️ Firebase - Moyennes sur 1 heure"}
             </Badge>
           </Flex>
 

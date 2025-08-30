@@ -10,17 +10,13 @@ import {
   useToast,
   Heading
 } from '@chakra-ui/react';
-import { API_ENDPOINTS } from './utils/systemMonitoringHelpers';
-import { useDevicesData, useDeviceAlerts } from './hooks/useDevicesData';
-import { debugDeviceTimestamps } from './utils/debugTimestamps';
-import OverviewCard from './components/monitoring/OverviewCard';
-import DatabaseValidationCard from './components/monitoring/DatabaseValidationCard';
-import DevicesGrid from './components/monitoring/DevicesGrid';
-import AlertsCard from './components/monitoring/AlertsCard';
-import StatusExplanationCard from './components/monitoring/StatusExplanationCard';
-// import AlertsTestingPanel from './components/testing/AlertsTestingPanel';
+import { API_ENDPOINTS } from '../../utils/systemMonitoringHelpers';
+import { useDevicesData, useDeviceAlerts } from '../../hooks/useDevicesData';
+import TechnicalOverviewCard from './TechnicalOverviewCard';
+import TechnicalDevicesTable from './TechnicalDevicesTable';
+import TechnicalAlertsCard from './TechnicalAlertsCard';
 
-const SystemMonitoring = () => {
+const TechnicalMonitoring = () => {
   const [systemHealth, setSystemHealth] = useState(null);
   const [firebaseData, setFirebaseData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -28,29 +24,18 @@ const SystemMonitoring = () => {
   const [useRealTime, setUseRealTime] = useState(true);
   const [readingInProgress, setReadingInProgress] = useState(new Set());
   const [updatedDevices, setUpdatedDevices] = useState(new Set());
-  // const [testDevices, setTestDevices] = useState([]);
-  // const [isTestMode, setIsTestMode] = useState(false);
   const toast = useToast();
 
   // Utiliser notre hook personnalisé pour traiter les données des devices
-  // En mode test, utiliser les devices de test, sinon les vraies données
-  // const currentDevices = isTestMode ? testDevices : systemHealth?.devices;
   const devicesData = useDevicesData(systemHealth?.devices, useRealTime);
   const deviceAlerts = useDeviceAlerts(devicesData.devices);
 
-  // Gestionnaire pour les devices de test
-  // const handleTestDevicesChange = useCallback((devices) => {
-  //   setTestDevices(devices);
-  //   setIsTestMode(devices.length > 0);
-  // }, []);
-
-  // Debug des timestamps quand les données changent
-  useEffect(() => {
-    if (systemHealth?.devices && process.env.NODE_ENV === 'development') {
-      console.log('🔍 Debug automatique des timestamps:');
-      debugDeviceTimestamps(systemHealth.devices);
-    }
-  }, [systemHealth?.devices]);
+  // Filtrer pour ne garder que les alertes techniques
+  const technicalAlerts = [...systemHealth?.alerts || [], ...deviceAlerts.filter(alert =>
+    alert.type?.includes('Offline') ||
+    alert.type?.includes('Données') ||
+    alert.type?.includes('Système')
+  )];
 
   const fetchSystemHealth = useCallback(async () => {
     setLoading(true);
@@ -187,7 +172,7 @@ const SystemMonitoring = () => {
       <Flex justify="center" align="center" minH="400px">
         <VStack spacing={4}>
           <Spinner size="xl" color="blue.500" />
-          <Text>Chargement de l'état du système...</Text>
+          <Text>Chargement de l'état technique...</Text>
         </VStack>
       </Flex>
     );
@@ -204,7 +189,7 @@ const SystemMonitoring = () => {
           gap={4}
         >
           <Heading size="lg" color="blue.600">
-            🖥️ Monitoring Système IoT
+            ⚙️ Technical Monitoring
           </Heading>
         </Flex>
 
@@ -217,27 +202,15 @@ const SystemMonitoring = () => {
 
         {systemHealth && (
           <>
-            <OverviewCard
+            <TechnicalOverviewCard
               systemHealth={systemHealth}
-              deviceAlerts={deviceAlerts}
+              firebaseData={firebaseData}
+              technicalAlerts={technicalAlerts}
             />
 
-            {/* Alertes en premier plan - plus visible */}
-            <AlertsCard alerts={[...systemHealth.alerts || [], ...deviceAlerts]} />
+            <TechnicalAlertsCard alerts={technicalAlerts} />
 
-            {/* Carte d'explication pour clarifier les statuts */}
-            <StatusExplanationCard />
-
-            <DatabaseValidationCard firebaseData={firebaseData} systemHealth={systemHealth} />
-
-            {/* Panneau de test des alertes (en mode développement) */}
-            {/* Temporairement désactivé pour résoudre les problèmes d'import
-            {process.env.NODE_ENV === 'development' && (
-              <AlertsTestingPanel onTestDevicesChange={handleTestDevicesChange} />
-            )}
-            */}
-
-            <DevicesGrid
+            <TechnicalDevicesTable
               devices={devicesData.devices}
               useRealTime={useRealTime}
               readingInProgress={readingInProgress}
@@ -252,4 +225,4 @@ const SystemMonitoring = () => {
   );
 };
 
-export default SystemMonitoring;
+export default TechnicalMonitoring;

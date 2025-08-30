@@ -2,7 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box } from '@chakra-ui/react';
 import Header from './components/Header';
-import { DashboardPage, AnalyticsPage, MonitoringPage } from './pages';
+import { DashboardPage, AnalyticsPage } from './pages';
+import EnvironmentalControlPage from './pages/EnvironmentalControlPage';
+import TechnicalMonitoringPage from './pages/TechnicalMonitoringPage';
 import InstallPrompt from './components/InstallPrompt';
 import { usePWA } from './hooks/usePWA';
 
@@ -55,9 +57,9 @@ function App() {
           flex="1"
         >
           <Routes>
-            <Route path="/" element={<DashboardPage />} />
+            <Route path="/" element={<EnvironmentalControlPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/monitoring" element={<MonitoringPage />} />
+            <Route path="/technical" element={<TechnicalMonitoringPage />} />
           </Routes>
         </Box>
       </Box>

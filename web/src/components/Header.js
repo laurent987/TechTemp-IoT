@@ -13,19 +13,37 @@ import {
   DrawerBody,
   VStack,
   Button,
-  Image
+  Image,
+  Badge
 } from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
 import { Link, useLocation } from 'react-router-dom';
 import { usePWA } from '../hooks/usePWA';
+import { useGlobalAlerts } from '../hooks/useGlobalAlerts';
 
 const Navigation = ({ isVertical = false, onClose }) => {
   const location = useLocation();
+  const { environmentalAlerts, technicalAlerts } = useGlobalAlerts();
 
   const navItems = [
-    { path: '/', label: '📈 Graphiques', icon: '📈' },
-    { path: '/analytics', label: '📊 Analyse', icon: '📊' },
-    { path: '/monitoring', label: '🖥️ Monitoring', icon: '🖥️' }
+    {
+      path: '/',
+      label: 'Environmental Control',
+      icon: '🌡️',
+      alertCount: environmentalAlerts
+    },
+    {
+      path: '/analytics',
+      label: 'Analyse',
+      icon: '📊',
+      alertCount: 0 // Pas d'alertes pour analytics
+    },
+    {
+      path: '/technical',
+      label: 'Technical Monitoring',
+      icon: '⚙️',
+      alertCount: technicalAlerts
+    }
   ];
 
   const NavButton = ({ item }) => (
@@ -38,8 +56,27 @@ const Navigation = ({ isVertical = false, onClose }) => {
       onClick={onClose}
       justifyContent={isVertical ? 'flex-start' : 'center'}
       w={isVertical ? 'full' : 'auto'}
+      position="relative"
     >
       {item.label}
+      {item.alertCount > 0 && (
+        <Badge
+          colorScheme="red"
+          variant="solid"
+          borderRadius="full"
+          fontSize="xs"
+          position="absolute"
+          top="-5px"
+          right="-5px"
+          minW="20px"
+          h="20px"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          {item.alertCount > 99 ? '99+' : item.alertCount}
+        </Badge>
+      )}
     </Button>
   );
 

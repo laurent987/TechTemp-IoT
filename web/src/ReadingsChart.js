@@ -1,6 +1,7 @@
 import React from "react";
 import { colorForRoom } from './colors';
-import { useWeatherData } from './weatherService';
+import WeatherChart from './components/WeatherChart';
+import ChartFiltersMenu from './components/environmental/ChartFiltersMenu';
 import {
   Box,
   Heading,
@@ -164,9 +165,33 @@ const makeHourlyTicks = (data) => {
 };
 
 // Composant principal
-export default function ReadingsChart({ data, loading, error, selectedRooms, startDate, endDate }) {
+export default function ReadingsChart({
+  data,
+  loading,
+  error,
+  selectedRooms,
+  startDate,
+  endDate,
+  // Props pour les filtres
+  rooms = [],
+  setSelectedRooms,
+  selectedDate,
+  setSelectedDate
+}) {
   const containerPx = useBreakpointValue({ base: 2, md: 8 });
   const [showWeather, setShowWeather] = React.useState(true);
+
+  // État pour les données météo (gérées par le composant isolé)
+  const [weatherState, setWeatherState] = React.useState({
+    weatherData: [],
+    weatherLoading: false,
+    weatherError: null
+  });
+
+  // Callback pour recevoir les données météo du composant isolé
+  const handleWeatherDataChange = React.useCallback((newWeatherState) => {
+    setWeatherState(newWeatherState);
+  }, []);
 
   // Responsive legend configuration
   const legendConfig = useBreakpointValue({
@@ -175,8 +200,11 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
       verticalAlign: "bottom",
       align: "center",
       wrapperStyle: {
-        paddingTop: '20px',
-        fontSize: '12px'
+        paddingTop: '15px',
+        paddingLeft: '10px',
+        paddingRight: '10px',
+        fontSize: '11px',
+        textAlign: 'center'
       }
     },
     md: {
@@ -184,68 +212,21 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
       verticalAlign: "middle",
       align: "right",
       wrapperStyle: {
-        right: -15,
+        right: '50px',
+        paddingLeft: '25px',
         fontSize: '14px'
       }
     }
   });
 
-  // Responsive chart dimensions
-  const chartHeight = useBreakpointValue({ base: 450, md: 400 });
+  // Responsive chart dimensions - hauteur augmentée
+  const chartHeight = useBreakpointValue({ base: 400, md: 380 });
   const chartMargins = useBreakpointValue({
     base: { top: 5, right: 30, left: 20, bottom: 60 },
-    md: { top: 5, right: 120, left: 20, bottom: 5 }
+    md: { top: 5, right: 140, left: 20, bottom: 20 }
   });
 
-  // Calculer les dates pour la météo
-  const weatherStartDate = React.useMemo(() => {
-    if (startDate) {
-      return new Date(startDate);
-    }
-    return null;
-  }, [startDate]);
-
-  const weatherEndDate = React.useMemo(() => {
-    if (endDate) {
-      return new Date(endDate);
-    } else if (startDate) {
-      // Si seulement startDate est fournie, utiliser le jour suivant
-      const nextDay = new Date(startDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-      return nextDay;
-    }
-    return null;
-  }, [startDate, endDate]);
-
-  // Hook pour les données météo avec les dates
-  const { weatherData, loading: weatherLoading, error: weatherError, fetchWeatherData } = useWeatherData(weatherStartDate, weatherEndDate);
-
-  // Charger les données météo au montage du composant et quand les dates changent
-  React.useEffect(() => {
-    if (showWeather) {
-      fetchWeatherData(weatherStartDate, weatherEndDate);
-    }
-  }, [showWeather, weatherStartDate, weatherEndDate, fetchWeatherData]);
-
-  // Actualiser les données météo toutes les 30 minutes (seulement si dates actuelles)
-  React.useEffect(() => {
-    const isCurrentDate = () => {
-      if (!startDate) return true;
-      const today = new Date();
-      const selected = new Date(startDate);
-      return selected.toDateString() === today.toDateString();
-    };
-
-    if (showWeather && isCurrentDate()) {
-      const interval = setInterval(() => {
-        fetchWeatherData(weatherStartDate, weatherEndDate);
-      }, 30 * 60 * 1000); // 30 minutes
-
-      return () => clearInterval(interval);
-    }
-  }, [showWeather, startDate, weatherStartDate, weatherEndDate, fetchWeatherData]);
-
-  const chartData = pivotReadings(data, selectedRooms, showWeather, weatherData);
+  const chartData = pivotReadings(data, selectedRooms, showWeather, weatherState.weatherData);
   const allRooms = showWeather ? [...selectedRooms, 'Extérieur', 'Extérieur (Prévision)'] : selectedRooms;
 
   // Debug: afficher les données du graphique
@@ -253,177 +234,181 @@ export default function ReadingsChart({ data, loading, error, selectedRooms, sta
     if (showWeather && chartData.length > 0) {
       console.log('ChartData sample:', chartData.slice(0, 3));
       console.log('AllRooms:', allRooms);
-      console.log('WeatherData length:', weatherData.length);
+      console.log('WeatherData length:', weatherState.weatherData.length);
     }
-  }, [chartData, allRooms, weatherData.length, showWeather]);
+  }, [chartData, allRooms, weatherState.weatherData.length, showWeather]);
 
   const hourlyTicks = React.useMemo(() => makeHourlyTicks(chartData), [chartData]);
 
   return (
-    <Box minH="100vh" bg="gray.50" py={8} px={containerPx}>
-      <Container maxW="5xl" bg="white" p={{ base: 4, md: 8 }} borderRadius="md" boxShadow="md">
-        <VStack align="stretch" spacing={6}>
-          <Box>
-            <Flex justify="space-between" align="center" mb={4}>
-              <Box>
-                <Heading size="lg" mb={2} color="blue.700">
-                  Températures par pièce
-                  {startDate && (
-                    <Text as="span" fontSize="md" color="gray.500" ml={2}>
-                      {new Date(startDate).toLocaleDateString()}
-                    </Text>
-                  )}
-                </Heading>
-                <Text color="gray.600">
-                  Suivi graphique de la température dans chaque pièce.
-                </Text>
-              </Box>
+    <Box bg="white">
+      {/* Composant isolé pour la météo */}
+      <WeatherChart
+        startDate={startDate}
+        endDate={endDate}
+        showWeather={showWeather}
+        onWeatherDataChange={handleWeatherDataChange}
+      />
 
-              <FormControl display="flex" alignItems="center" width="auto">
-                <FormLabel htmlFor="weather-toggle" mb="0" fontSize="sm">
-                  Temp. extérieure
-                </FormLabel>
-                <Switch
-                  id="weather-toggle"
-                  isChecked={showWeather}
-                  onChange={(e) => setShowWeather(e.target.checked)}
-                  colorScheme="blue"
-                />
-              </FormControl>
+      <VStack align="stretch" spacing={6}>
+        <Box>
+          <Flex justify="space-between" align="center" mb={4}>
+            <Box>
+              <Heading size="md" mb={2} color="blue.700">
+                Températures par pièce
+                {startDate && (
+                  <Text as="span" fontSize="sm" color="gray.500" ml={2}>
+                    {new Date(startDate).toLocaleDateString()}
+                  </Text>
+                )}
+              </Heading>
+              <Text color="gray.600">
+                Suivi graphique de la température dans chaque pièce.
+              </Text>
+            </Box>
+
+            <ChartFiltersMenu
+              rooms={rooms}
+              selectedRooms={selectedRooms}
+              setSelectedRooms={setSelectedRooms}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              showWeather={showWeather}
+              setShowWeather={setShowWeather}
+            />
+          </Flex>
+        </Box>
+
+        {error && (
+          <Alert status="error" borderRadius="md">
+            <AlertIcon />
+            {error}
+          </Alert>
+        )}
+
+        {weatherState.weatherError && showWeather && (
+          <Alert status="warning" borderRadius="md">
+            <AlertIcon />
+            Météo: {weatherState.weatherError}
+          </Alert>
+        )}
+
+        {/* Affichage du graphique même pendant le chargement */}
+        <Box position="relative" minH={chartHeight}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <LineChart data={chartData} margin={chartMargins}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="timestamp"
+                type="number"                // recommandé si timestamp numérique
+                domain={['dataMin', 'dataMax']}
+                tickFormatter={fmtHour}
+                ticks={hourlyTicks}
+                interval="preserveStart"
+              />
+              <YAxis
+                label={{ value: "Temp (°C)", angle: -90, position: "insideLeft" }}
+                allowDecimals={false}
+                domain={[
+                  (min) => Math.floor(min - 1),   // ou min - 0.5
+                  (max) => Math.ceil(max + 1),    // ou max + 0.5
+                ]}
+                tickCount={10}
+              />
+              <Tooltip labelFormatter={fmtHour} />
+
+              <Legend
+                layout={legendConfig.layout}
+                verticalAlign={legendConfig.verticalAlign}
+                align={legendConfig.align}
+                wrapperStyle={legendConfig.wrapperStyle}
+                iconSize={14}
+              />
+              {allRooms.map((room) => {
+                // Déterminer le style selon le type de données météo
+                const isWeatherReal = room === 'Extérieur';
+                const isWeatherForecast = room === 'Extérieur (Prévision)';
+                const isWeather = isWeatherReal || isWeatherForecast;
+
+                return (
+                  <Line
+                    key={room}
+                    type="monotone"
+                    dataKey={`${room}`}
+                    name={isWeatherForecast ? '' : room}  // Nom vide pour cacher de la légende
+                    stroke={
+                      isWeatherReal ? '#2563EB' :      // Bleu pour température extérieure réelle
+                        isWeatherForecast ? '#2563EB' :  // Gris pour prévisions
+                          colorForRoom(room)               // Couleurs normales pour les pièces
+                    }
+                    strokeWidth={
+                      isWeatherReal ? 4 :              // Plus épais pour température extérieure
+                        isWeatherForecast ? 2 :          // Normal pour prévisions
+                          2                                // Normal pour les pièces
+                    }
+                    dot={false}
+                    connectNulls
+                    strokeDasharray={
+                      isWeatherReal ? '0' :           // Ligne continue pour données réelles
+                        isWeatherForecast ? '5 5' :     // Pointillés pour prévisions
+                          '0'                             // Ligne continue pour capteurs
+                    }
+                    opacity={isWeatherForecast ? 0.8 : 1} // Prévisions un peu transparentes
+                    legendType={isWeatherForecast ? 'none' : 'line'} // Pas de légende pour prévisions
+                  />
+                );
+              })}
+              <Brush
+                dataKey="timestamp"
+                height={24}
+                tickFormatter={fmtHour}     // même format dans le mini-axe du Brush
+                travellerWidth={10}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+
+          {/* Overlay chargement : s'affiche au-dessus du graphique */}
+          {(loading || (weatherState.weatherLoading && showWeather)) && (
+            <Flex
+              position="absolute"
+              top={0}
+              left={0}
+              w="100%"
+              h="100%"
+              align="center"
+              justify="center"
+              bg="rgba(255,255,255,0.6)"
+              zIndex={2}
+              borderRadius="md"
+            >
+              <Spinner size="lg" color="blue.500" />
+              <Text ml={3}>
+                {loading && weatherState.weatherLoading ? 'Chargement des données...'
+                  : loading ? 'Chargement capteurs...'
+                    : 'Chargement météo...'}
+              </Text>
             </Flex>
-          </Box>
-
-          {error && (
-            <Alert status="error" borderRadius="md">
-              <AlertIcon />
-              {error}
-            </Alert>
           )}
 
-          {weatherError && showWeather && (
-            <Alert status="warning" borderRadius="md">
-              <AlertIcon />
-              Météo: {weatherError}
-            </Alert>
+          {/* Cas aucune donnée sélectionnée */}
+          {!loading && chartData.length === 0 && (
+            <Flex
+              position="absolute"
+              top={0}
+              left={0}
+              w="100%"
+              h="100%"
+              align="center"
+              justify="center"
+              bg="rgba(255,255,255,0.8)"
+              zIndex={2}
+              borderRadius="md"
+            >
+              <Text color="gray.500">Aucune donnée à afficher.</Text>
+            </Flex>
           )}
-
-          {/* Affichage du graphique même pendant le chargement */}
-          <Box position="relative" minH={chartHeight}>
-            <ResponsiveContainer width="100%" height={chartHeight}>
-              <LineChart data={chartData} margin={chartMargins}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="timestamp"
-                  type="number"                // recommandé si timestamp numérique
-                  domain={['dataMin', 'dataMax']}
-                  tickFormatter={fmtHour}
-                  ticks={hourlyTicks}
-                  interval="preserveStart"
-                />
-                <YAxis
-                  label={{ value: "Temp (°C)", angle: -90, position: "insideLeft" }}
-                  allowDecimals={false}
-                  domain={[
-                    (min) => Math.floor(min - 1),   // ou min - 0.5
-                    (max) => Math.ceil(max + 1),    // ou max + 0.5
-                  ]}
-                  tickCount={10}
-                />
-                <Tooltip labelFormatter={fmtHour} />
-
-                <Legend
-                  layout={legendConfig.layout}
-                  verticalAlign={legendConfig.verticalAlign}
-                  align={legendConfig.align}
-                  wrapperStyle={legendConfig.wrapperStyle}
-                  iconSize={14}
-                />
-                {allRooms.map((room) => {
-                  // Déterminer le style selon le type de données météo
-                  const isWeatherReal = room === 'Extérieur';
-                  const isWeatherForecast = room === 'Extérieur (Prévision)';
-                  const isWeather = isWeatherReal || isWeatherForecast;
-
-                  return (
-                    <Line
-                      key={room}
-                      type="monotone"
-                      dataKey={`${room}`}
-                      name={isWeatherForecast ? '' : room}  // Nom vide pour cacher de la légende
-                      stroke={
-                        isWeatherReal ? '#2563EB' :      // Bleu pour température extérieure réelle
-                          isWeatherForecast ? '#2563EB' :  // Gris pour prévisions
-                            colorForRoom(room)               // Couleurs normales pour les pièces
-                      }
-                      strokeWidth={
-                        isWeatherReal ? 4 :              // Plus épais pour température extérieure
-                          isWeatherForecast ? 2 :          // Normal pour prévisions
-                            2                                // Normal pour les pièces
-                      }
-                      dot={false}
-                      connectNulls
-                      strokeDasharray={
-                        isWeatherReal ? '0' :           // Ligne continue pour données réelles
-                          isWeatherForecast ? '5 5' :     // Pointillés pour prévisions
-                            '0'                             // Ligne continue pour capteurs
-                      }
-                      opacity={isWeatherForecast ? 0.8 : 1} // Prévisions un peu transparentes
-                      legendType={isWeatherForecast ? 'none' : 'line'} // Pas de légende pour prévisions
-                    />
-                  );
-                })}
-                <Brush
-                  dataKey="timestamp"
-                  height={24}
-                  tickFormatter={fmtHour}     // même format dans le mini-axe du Brush
-                  travellerWidth={10}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-
-            {/* Overlay chargement : s'affiche au-dessus du graphique */}
-            {(loading || (weatherLoading && showWeather)) && (
-              <Flex
-                position="absolute"
-                top={0}
-                left={0}
-                w="100%"
-                h="100%"
-                align="center"
-                justify="center"
-                bg="rgba(255,255,255,0.6)"
-                zIndex={2}
-                borderRadius="md"
-              >
-                <Spinner size="lg" color="blue.500" />
-                <Text ml={3}>
-                  {loading && weatherLoading ? 'Chargement des données...'
-                    : loading ? 'Chargement capteurs...'
-                      : 'Chargement météo...'}
-                </Text>
-              </Flex>
-            )}
-
-            {/* Cas aucune donnée sélectionnée */}
-            {!loading && chartData.length === 0 && (
-              <Flex
-                position="absolute"
-                top={0}
-                left={0}
-                w="100%"
-                h="100%"
-                align="center"
-                justify="center"
-                bg="rgba(255,255,255,0.8)"
-                zIndex={2}
-                borderRadius="md"
-              >
-                <Text color="gray.500">Aucune donnée à afficher.</Text>
-              </Flex>
-            )}
-          </Box>
-        </VStack>
-      </Container>
+        </Box>
+      </VStack>
     </Box>
   );
 }

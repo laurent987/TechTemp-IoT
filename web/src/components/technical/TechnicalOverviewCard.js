@@ -17,26 +17,23 @@ import {
 } from '@chakra-ui/react';
 import { getStatusColor, getStatusIcon } from '../../utils/systemMonitoringHelpers';
 
-const OverviewCard = ({ systemHealth, deviceAlerts = [] }) => {
-  // Calculer les statistiques d'alertes
+const TechnicalOverviewCard = ({ systemHealth, firebaseData, technicalAlerts }) => {
   const systemAlerts = systemHealth.alerts?.length || 0;
-  const environmentAlerts = deviceAlerts.length || 0;
-  const totalAlerts = systemAlerts + environmentAlerts;
+  const deviceTechnicalAlerts = technicalAlerts.length - systemAlerts;
 
   return (
     <Card>
       <CardHeader>
-        <Heading size="md">📊 Vue d'ensemble</Heading>
+        <Heading size="md">🔧 Vue d'ensemble technique</Heading>
         <Text fontSize="sm" color="gray.600">
-          Dernière mise à jour: {new Date().toLocaleString('fr-FR')}
+          Infrastructure, connectivité et santé des capteurs
         </Text>
       </CardHeader>
       <CardBody>
-        {/* Section 1: Statut Technique */}
-        <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6} mb={6}>
+        <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={6}>
           <GridItem>
             <Stat>
-              <StatLabel>🔧 Statut Technique</StatLabel>
+              <StatLabel>Statut Infrastructure</StatLabel>
               <HStack>
                 <Icon
                   as={getStatusIcon(systemHealth.global_status)}
@@ -49,64 +46,57 @@ const OverviewCard = ({ systemHealth, deviceAlerts = [] }) => {
                   {systemHealth.global_status}
                 </StatNumber>
               </HStack>
-              <StatHelpText>Hardware, software, connectivité</StatHelpText>
+              <StatHelpText>Serveurs, DB, réseau</StatHelpText>
             </Stat>
           </GridItem>
 
           <GridItem>
             <Stat>
-              <StatLabel>📡 Devices Connectés</StatLabel>
+              <StatLabel>Connectivité Capteurs</StatLabel>
               <StatNumber color="blue.600">
                 {systemHealth.summary.online} / {systemHealth.summary.total_devices}
               </StatNumber>
               <StatHelpText>
                 {systemHealth.summary.total_devices - systemHealth.summary.online > 0
                   ? `${systemHealth.summary.total_devices - systemHealth.summary.online} offline`
-                  : 'Tous en ligne'}
+                  : 'Tous connectés'}
               </StatHelpText>
             </Stat>
           </GridItem>
-        </Grid>
 
-        {/* Section 2: Alertes Global */}
-        <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4} mb={4}>
           <GridItem>
             <Stat>
-              <StatLabel>🚨 Alertes Total</StatLabel>
-              <StatNumber color={totalAlerts > 0 ? "red.600" : "green.600"}>
-                {totalAlerts}
+              <StatLabel>Alertes Techniques</StatLabel>
+              <StatNumber color={technicalAlerts.length > 0 ? "orange.600" : "green.600"}>
+                {technicalAlerts.length}
               </StatNumber>
               <StatHelpText>
-                {totalAlerts === 0 ? 'Aucun problème' : 'Problèmes détectés'}
+                Système + Capteurs
               </StatHelpText>
             </Stat>
           </GridItem>
 
           <GridItem>
             <Stat>
-              <StatLabel>⚙️ Alertes Système</StatLabel>
-              <StatNumber color={systemAlerts > 0 ? "orange.600" : "green.600"}>
-                {systemAlerts}
+              <StatLabel>Synchronisation</StatLabel>
+              <StatNumber color={firebaseData ? "green.600" : "orange.600"}>
+                {firebaseData ? 'OK' : 'Partielle'}
               </StatNumber>
-              <StatHelpText>Technique/Connectivité</StatHelpText>
-            </Stat>
-          </GridItem>
-
-          <GridItem>
-            <Stat>
-              <StatLabel>🌡️ Alertes Environnement</StatLabel>
-              <StatNumber color={environmentAlerts > 0 ? "red.600" : "green.600"}>
-                {environmentAlerts}
-              </StatNumber>
-              <StatHelpText>Température/Humidité</StatHelpText>
+              <StatHelpText>
+                Local ↔ Firebase
+              </StatHelpText>
             </Stat>
           </GridItem>
         </Grid>
 
-        {/* Section 3: Badges de statut */}
-        <HStack spacing={2} flexWrap="wrap">
+        {/* Badges de statut */}
+        <HStack spacing={2} flexWrap="wrap" mt={4}>
+          <Badge colorScheme={getStatusColor(systemHealth.global_status)} variant="subtle">
+            🏗️ Infrastructure {systemHealth.global_status}
+          </Badge>
+
           <Badge colorScheme="green" variant="subtle">
-            ✅ {systemHealth.summary.online} Online
+            📡 {systemHealth.summary.online} Connected
           </Badge>
 
           {systemHealth.summary.total_devices - systemHealth.summary.online > 0 && (
@@ -121,15 +111,15 @@ const OverviewCard = ({ systemHealth, deviceAlerts = [] }) => {
             </Badge>
           )}
 
-          {environmentAlerts > 0 && (
-            <Badge colorScheme="red" variant="subtle">
-              🌡️ {environmentAlerts} Environnement
+          {deviceTechnicalAlerts > 0 && (
+            <Badge colorScheme="yellow" variant="subtle">
+              📡 {deviceTechnicalAlerts} Capteurs
             </Badge>
           )}
 
-          {totalAlerts === 0 && (
+          {technicalAlerts.length === 0 && (
             <Badge colorScheme="green" variant="solid">
-              🎉 Tout fonctionne parfaitement
+              ✅ Tout fonctionne parfaitement
             </Badge>
           )}
         </HStack>
@@ -138,4 +128,4 @@ const OverviewCard = ({ systemHealth, deviceAlerts = [] }) => {
   );
 };
 
-export default OverviewCard;
+export default TechnicalOverviewCard;
