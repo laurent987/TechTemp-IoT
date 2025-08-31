@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Container, useBreakpointValue } from '@chakra-ui/react';
-import RoomStatsAnalyzer from '../RoomStatsAnalyzer';
+import RoomStatsAnalyzer from '../components/analytics/RoomStatsAnalyzer';
 
 export default function AnalyticsPage() {
   // Responsive design

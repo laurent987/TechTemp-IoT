@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Container, useBreakpointValue } from '@chakra-ui/react';
-import SystemMonitoring from '../SystemMonitoring';
+import SystemMonitoring from '../components/technical/SystemMonitoring';
 
 export default function MonitoringPage() {
   // Responsive design

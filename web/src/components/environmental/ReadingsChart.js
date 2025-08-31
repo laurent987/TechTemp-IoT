@@ -4,19 +4,15 @@ import WeatherChart from '../WeatherChart';
 import ChartFiltersMenu from './ChartFiltersMenu';
 import {
   Box,
-  Heading,
+  VStack,
   Text,
   Spinner,
   Alert,
   AlertIcon,
-  Flex,
-  Container,
-  VStack,
   useBreakpointValue,
-  Switch,
-  FormControl,
-  FormLabel,
-} from "@chakra-ui/react";
+  Flex,
+  Heading
+} from '@chakra-ui/react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -24,7 +20,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   Brush
 } from "recharts";
@@ -84,7 +80,6 @@ function pivotReadings(rawReadings, selectedRooms, includeWeather = false, weath
       });
 
       // Ajouter le dernier point réel au timestamp des prévisions pour la continuité
-      const lastRealTs = lastRealPoint.timestamp;
       const firstForecastTs = firstForecastPoint.timestamp;
 
       // Étendre la courbe réelle jusqu'au premier point de prévision
@@ -178,7 +173,6 @@ export default function ReadingsChart({
   selectedDate,
   setSelectedDate
 }) {
-  const containerPx = useBreakpointValue({ base: 2, md: 8 });
   const [showWeather, setShowWeather] = React.useState(true);
 
   // État pour les données météo (gérées par le composant isolé)
@@ -227,7 +221,7 @@ export default function ReadingsChart({
   });
 
   const chartData = pivotReadings(data, selectedRooms, showWeather, weatherState.weatherData);
-  const allRooms = showWeather ? [...selectedRooms, 'Extérieur', 'Extérieur (Prévision)'] : selectedRooms;
+  const allRooms = React.useMemo(() => showWeather ? [...selectedRooms, 'Extérieur', 'Extérieur (Prévision)'] : selectedRooms, [selectedRooms, showWeather]);
 
   // Debug: afficher les données du graphique
   React.useEffect(() => {
@@ -315,7 +309,7 @@ export default function ReadingsChart({
                 ]}
                 tickCount={10}
               />
-              <Tooltip labelFormatter={fmtHour} />
+              <RechartsTooltip labelFormatter={fmtHour} />
 
               <Legend
                 layout={legendConfig.layout}
@@ -328,7 +322,6 @@ export default function ReadingsChart({
                 // Déterminer le style selon le type de données météo
                 const isWeatherReal = room === 'Extérieur';
                 const isWeatherForecast = room === 'Extérieur (Prévision)';
-                const isWeather = isWeatherReal || isWeatherForecast;
 
                 return (
                   <Line

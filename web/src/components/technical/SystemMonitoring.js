@@ -10,14 +10,14 @@ import {
   useToast,
   Heading
 } from '@chakra-ui/react';
-import { API_ENDPOINTS } from './utils/systemMonitoringHelpers';
-import { useDevicesData, useDeviceAlerts } from './hooks/useDevicesData';
-import { debugDeviceTimestamps } from './utils/debugTimestamps';
-import OverviewCard from './components/monitoring/OverviewCard';
-import DatabaseValidationCard from './components/monitoring/DatabaseValidationCard';
-import DevicesGrid from './components/monitoring/DevicesGrid';
-import AlertsCard from './components/monitoring/AlertsCard';
-import StatusExplanationCard from './components/monitoring/StatusExplanationCard';
+import { API_ENDPOINTS } from '../../utils/systemMonitoringHelpers';
+import { useDevicesData, useDeviceAlerts } from '../../hooks/useDevicesData';
+import { debugDeviceTimestamps } from '../../utils/debugTimestamps';
+import OverviewCard from '../monitoring/OverviewCard';
+import DatabaseValidationCard from '../monitoring/DatabaseValidationCard';
+import DevicesGrid from '../monitoring/DevicesGrid';
+import AlertsCard from '../monitoring/AlertsCard';
+import StatusExplanationCard from '../monitoring/StatusExplanationCard';
 // import AlertsTestingPanel from './components/testing/AlertsTestingPanel';
 
 const SystemMonitoring = () => {

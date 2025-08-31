@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Box, Flex, useBreakpointValue } from '@chakra-ui/react';
-import SidebarFilters from '../SidebarFilters';
+import SidebarFilters from '../components/common/SidebarFilters';
 import ReadingsChart from '../components/environmental/ReadingsChart';
-import { useReadingsData } from '../useReadingsData';
+import { useReadingsData } from '../hooks/useReadingsData';
 
 export default function DashboardPage() {
   // Sélection d'une date (par défaut aujourd'hui)

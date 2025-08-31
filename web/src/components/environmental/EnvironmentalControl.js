@@ -6,7 +6,6 @@ import {
   Text,
   VStack,
   Flex,
-  Heading,
   Switch,
   FormControl,
   FormLabel,
@@ -18,7 +17,7 @@ import { useDevicesData, useDeviceAlerts } from '../../hooks/useDevicesData';
 import { useFirebaseDevices } from '../../hooks/useFirebaseDevices';
 import { useSystemHealth } from '../../hooks/useSystemHealth';
 import { useDeviceReadings } from '../../hooks/useDeviceReadings';
-import { useReadingsData } from '../../useReadingsData';
+import { useReadingsData } from '../../hooks/useReadingsData';
 import EnvironmentalOverviewCard from './EnvironmentalOverviewCard';
 import EnvironmentalDevicesGrid from './EnvironmentalDevicesGrid';
 import ReadingsChart from './ReadingsChart';

@@ -10,7 +10,6 @@ import {
   Drawer,
   DrawerOverlay,
   DrawerContent,
-  DrawerBody,
   VStack,
   Button,
   Image,

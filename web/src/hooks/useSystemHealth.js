@@ -266,7 +266,7 @@ export const useSystemHealth = () => {
     } finally {
       setTestingRealTime(false);
     }
-  }, [toast]);
+  }, [toast, useRealTimeForDevices]);
 
   const handleToggleDevicesRealTime = useCallback(() => {
     const newRealTimeMode = !useRealTimeForDevices;

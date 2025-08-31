@@ -11,19 +11,9 @@ import {
   Badge,
   Button,
   Box,
-  Alert,
-  AlertIcon,
   Spinner
 } from '@chakra-ui/react';
 import { keyframes } from '@emotion/react';
-import { formatLastSeen } from '../../utils/systemMonitoringHelpers';
-
-// Animation pulse pour les valeurs pendant la lecture
-const pulseDuringReading = keyframes`
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.9; }
-  100% { transform: scale(1); opacity: 1; }
-`;
 
 // Animation de satisfaction quand les nouvelles données arrivent
 const newDataPulse = keyframes`

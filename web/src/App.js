@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box } from '@chakra-ui/react';
 import Header from './components/Header';
-import { DashboardPage, AnalyticsPage } from './pages';
+import { AnalyticsPage } from './pages';
 import EnvironmentalControlPage from './pages/EnvironmentalControlPage';
 import TechnicalMonitoringPage from './pages/TechnicalMonitoringPage';
 import InstallPrompt from './components/InstallPrompt';

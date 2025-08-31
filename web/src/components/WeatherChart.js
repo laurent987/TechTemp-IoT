@@ -1,5 +1,5 @@
 import React from 'react';
-import { useWeatherData } from '../weatherService';
+import { useWeatherData } from '../services/weatherService';
 
 /**
  * Composant isolé pour les données météo

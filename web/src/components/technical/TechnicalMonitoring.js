@@ -5,13 +5,11 @@ import {
   AlertIcon,
   Text,
   VStack,
-  Heading,
   Card,
   CardBody,
   Badge,
   HStack,
   Divider,
-  Code,
   Table,
   Thead,
   Tbody,
@@ -35,7 +33,6 @@ const TechnicalMonitoring = () => {
   // Hook pour la santé système
   const {
     systemHealth,
-    loading,
     error,
     realTimeAvailable,
     fetchSystemHealth
