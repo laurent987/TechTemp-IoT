@@ -2,31 +2,25 @@ import React from 'react';
 import {
   Alert,
   AlertIcon,
-  Card,
-  CardBody,
-  CardHeader,
-  Heading,
   Text,
   VStack
 } from '@chakra-ui/react';
+import StandardCard from '../common/StandardCard';
 
 const AlertsCard = ({ alerts }) => {
   if (!alerts || alerts.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <Heading size="md">🎉 Statut des Alertes</Heading>
-        </CardHeader>
-        <CardBody>
-          <Alert status="success">
-            <AlertIcon />
-            <VStack spacing={1} align="start">
-              <Text fontWeight="bold">Aucune alerte active</Text>
-              <Text fontSize="sm">Tous les systèmes fonctionnent normalement</Text>
-            </VStack>
-          </Alert>
-        </CardBody>
-      </Card>
+      <StandardCard
+        title="🎉 Statut des Alertes"
+      >
+        <Alert status="success">
+          <AlertIcon />
+          <VStack spacing={1} align="start">
+            <Text fontWeight="bold">Aucune alerte active</Text>
+            <Text fontSize="sm">Tous les systèmes fonctionnent normalement</Text>
+          </VStack>
+        </Alert>
+      </StandardCard>
     );
   }
 
@@ -59,67 +53,62 @@ const AlertsCard = ({ alerts }) => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <Heading size="md">🚨 Alertes Détectées ({alerts.length})</Heading>
-        <Text fontSize="sm" color="gray.600">
-          {systemAlerts.length} système • {environmentAlerts.length} environnement
-        </Text>
-      </CardHeader>
-      <CardBody>
-        <VStack spacing={4} align="stretch">
-          {/* Alertes Système */}
-          {systemAlerts.length > 0 && (
-            <VStack spacing={2} align="stretch">
-              <Text fontWeight="bold" color="orange.600" fontSize="sm">
-                ⚙️ ALERTES SYSTÈME ({systemAlerts.length})
-              </Text>
-              {systemAlerts.map((alert, index) => (
-                <Alert key={`system-${index}`} status={getAlertStatus(alert.type)}>
-                  <AlertIcon />
-                  <VStack spacing={1} align="start" flex={1}>
-                    <Text fontWeight="bold">
-                      {getAlertIcon(alert.type)} {alert.type}
+    <StandardCard
+      title={`🚨 Alertes Détectées (${alerts.length})`}
+      subtitle={`${systemAlerts.length} système • ${environmentAlerts.length} environnement`}
+    >
+      <VStack spacing={4} align="stretch">
+        {/* Alertes Système */}
+        {systemAlerts.length > 0 && (
+          <VStack spacing={2} align="stretch">
+            <Text fontWeight="bold" color="orange.600" fontSize="sm">
+              ⚙️ ALERTES SYSTÈME ({systemAlerts.length})
+            </Text>
+            {systemAlerts.map((alert, index) => (
+              <Alert key={`system-${index}`} status={getAlertStatus(alert.type)}>
+                <AlertIcon />
+                <VStack spacing={1} align="start" flex={1}>
+                  <Text fontWeight="bold">
+                    {getAlertIcon(alert.type)} {alert.type}
+                  </Text>
+                  <Text fontSize="sm">{alert.message}</Text>
+                  {alert.room_name && (
+                    <Text fontSize="xs" color="gray.600">
+                      📍 {alert.room_name} (Sensor {alert.sensor_id})
                     </Text>
-                    <Text fontSize="sm">{alert.message}</Text>
-                    {alert.room_name && (
-                      <Text fontSize="xs" color="gray.600">
-                        📍 {alert.room_name} (Sensor {alert.sensor_id})
-                      </Text>
-                    )}
-                  </VStack>
-                </Alert>
-              ))}
-            </VStack>
-          )}
+                  )}
+                </VStack>
+              </Alert>
+            ))}
+          </VStack>
+        )}
 
-          {/* Alertes Environnement */}
-          {environmentAlerts.length > 0 && (
-            <VStack spacing={2} align="stretch">
-              <Text fontWeight="bold" color="red.600" fontSize="sm">
-                🌡️ ALERTES ENVIRONNEMENT ({environmentAlerts.length})
-              </Text>
-              {environmentAlerts.map((alert, index) => (
-                <Alert key={`env-${index}`} status={getAlertStatus(alert.type)}>
-                  <AlertIcon />
-                  <VStack spacing={1} align="start" flex={1}>
-                    <Text fontWeight="bold">
-                      {getAlertIcon(alert.type)} {alert.type}
+        {/* Alertes Environnement */}
+        {environmentAlerts.length > 0 && (
+          <VStack spacing={2} align="stretch">
+            <Text fontWeight="bold" color="red.600" fontSize="sm">
+              🌡️ ALERTES ENVIRONNEMENT ({environmentAlerts.length})
+            </Text>
+            {environmentAlerts.map((alert, index) => (
+              <Alert key={`env-${index}`} status={getAlertStatus(alert.type)}>
+                <AlertIcon />
+                <VStack spacing={1} align="start" flex={1}>
+                  <Text fontWeight="bold">
+                    {getAlertIcon(alert.type)} {alert.type}
+                  </Text>
+                  <Text fontSize="sm">{alert.message}</Text>
+                  {alert.room_name && (
+                    <Text fontSize="xs" color="gray.600">
+                      📍 {alert.room_name} (Sensor {alert.sensor_id})
                     </Text>
-                    <Text fontSize="sm">{alert.message}</Text>
-                    {alert.room_name && (
-                      <Text fontSize="xs" color="gray.600">
-                        📍 {alert.room_name} (Sensor {alert.sensor_id})
-                      </Text>
-                    )}
-                  </VStack>
-                </Alert>
-              ))}
-            </VStack>
-          )}
-        </VStack>
-      </CardBody>
-    </Card>
+                  )}
+                </VStack>
+              </Alert>
+            ))}
+          </VStack>
+        )}
+      </VStack>
+    </StandardCard>
   );
 };
 

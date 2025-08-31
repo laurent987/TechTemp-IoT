@@ -1,225 +1,293 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Alert,
   AlertIcon,
-  Spinner,
   Text,
   VStack,
-  Flex,
-  useToast,
-  Heading
+  Heading,
+  Card,
+  CardBody,
+  Badge,
+  HStack,
+  Divider,
+  Code,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  useBreakpointValue,
+  Collapse,
+  IconButton
 } from '@chakra-ui/react';
-import { API_ENDPOINTS } from '../../utils/systemMonitoringHelpers';
-import { useDevicesData, useDeviceAlerts } from '../../hooks/useDevicesData';
-import TechnicalOverviewCard from './TechnicalOverviewCard';
-import TechnicalDevicesTable from './TechnicalDevicesTable';
-import TechnicalAlertsCard from './TechnicalAlertsCard';
+import { ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
+
+import { useSystemHealth } from '../../hooks/useSystemHealth';
+import { useFirebaseDevices } from '../../hooks/useFirebaseDevices';
+import { formatLastSeen, getStatusColor } from '../../utils/systemMonitoringHelpers';
+import RaspberryPiCard from './RaspberryPiCard';
+import FirebaseCard from './FirebaseCard';
+import StandardCard from '../common/StandardCard';
 
 const TechnicalMonitoring = () => {
-  const [systemHealth, setSystemHealth] = useState(null);
-  const [firebaseData, setFirebaseData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [useRealTime, setUseRealTime] = useState(true);
-  const [readingInProgress, setReadingInProgress] = useState(new Set());
-  const [updatedDevices, setUpdatedDevices] = useState(new Set());
-  const toast = useToast();
+  // Hook pour la santé système
+  const {
+    systemHealth,
+    loading,
+    error,
+    realTimeAvailable,
+    fetchSystemHealth
+  } = useSystemHealth();
 
-  // Utiliser notre hook personnalisé pour traiter les données des devices
-  const devicesData = useDevicesData(systemHealth?.devices, useRealTime);
-  const deviceAlerts = useDeviceAlerts(devicesData.devices);
+  // Données Firebase pour comparaison
+  const firebaseDevicesData = useFirebaseDevices();
 
-  // Filtrer pour ne garder que les alertes techniques
-  const technicalAlerts = [...systemHealth?.alerts || [], ...deviceAlerts.filter(alert =>
-    alert.type?.includes('Offline') ||
-    alert.type?.includes('Données') ||
-    alert.type?.includes('Système')
-  )];
+  // État de l'accordéon mobile
+  const [expandedDevices, setExpandedDevices] = useState(new Set());
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
-  const fetchSystemHealth = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const apiUrl = useRealTime ? API_ENDPOINTS.LOCAL_HEALTH : API_ENDPOINTS.FIREBASE_HEALTH;
-      const response = await fetch(apiUrl);
-
-      if (!response.ok) {
-        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setSystemHealth(data);
-    } catch (err) {
-      setError(err.message);
-      toast({
-        title: "Erreur",
-        description: `${useRealTime ? 'API Locale' : 'Firebase'}: ${err.message}`,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [useRealTime, toast]);
-
-  const fetchFirebaseData = useCallback(async () => {
-    try {
-      const response = await fetch(API_ENDPOINTS.FIREBASE_HEALTH);
-      if (!response.ok) {
-        console.warn('Impossible de récupérer les données Firebase pour validation');
-        return;
-      }
-      const data = await response.json();
-      setFirebaseData(data);
-    } catch (err) {
-      console.warn('Erreur lors de la récupération des données Firebase:', err.message);
-    }
-  }, []);
-
-  const markDeviceAsUpdated = useCallback((deviceIds) => {
-    const ids = Array.isArray(deviceIds) ? deviceIds : [deviceIds];
-    setUpdatedDevices(prev => new Set([...prev, ...ids]));
-
-    setTimeout(() => {
-      setUpdatedDevices(prev => {
-        const newSet = new Set(prev);
-        ids.forEach(id => newSet.delete(id));
-        return newSet;
-      });
-    }, 3000);
-  }, []);
-
-  const triggerImmediateReading = useCallback(async (sensorId = null) => {
-    if (!useRealTime) {
-      toast({
-        title: "Erreur",
-        description: "La lecture immédiate n'est disponible qu'en mode temps réel",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    const readingKey = sensorId || 'all';
-    setReadingInProgress(prev => new Set([...prev, readingKey]));
-
-    try {
-      const body = sensorId ? JSON.stringify({ sensor_id: sensorId }) : "{}";
-      const response = await fetch(API_ENDPOINTS.TRIGGER_READING, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: body
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-      }
-
-      toast({
-        title: "Lecture déclenchée",
-        description: `Commande envoyée avec succès ${sensorId ? `au capteur ${sensorId}` : 'à tous les capteurs'}`,
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-
-      setTimeout(() => {
-        if (sensorId) {
-          markDeviceAsUpdated(sensorId);
-        } else if (systemHealth?.devices) {
-          const allDeviceIds = systemHealth.devices.map(d => d.sensor_id);
-          markDeviceAsUpdated(allDeviceIds);
-        }
-        fetchSystemHealth();
-        setReadingInProgress(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(readingKey);
-          return newSet;
-        });
-      }, 2000);
-    } catch (err) {
-      setReadingInProgress(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(readingKey);
-        return newSet;
-      });
-
-      toast({
-        title: "Erreur",
-        description: `Impossible de déclencher la lecture: ${err.message}`,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  }, [useRealTime, systemHealth, toast, fetchSystemHealth, markDeviceAsUpdated]);
-
-  const handleToggleRealTime = useCallback(() => {
-    setUseRealTime(!useRealTime);
-  }, [useRealTime]);
-
+  // Test initial unique
   useEffect(() => {
-    fetchSystemHealth();
-    fetchFirebaseData();
-  }, [fetchSystemHealth, fetchFirebaseData]);
+    console.log('🔧 TechnicalMonitoring - Test diagnostic initial');
+    fetchSystemHealth(null, 'technical-diagnostic');
+  }, [fetchSystemHealth]);
 
-  if (loading && !systemHealth) {
+  // Fonction pour basculer l'accordéon mobile
+  const toggleDevice = (deviceId) => {
+    setExpandedDevices(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(deviceId)) {
+        newSet.delete(deviceId);
+      } else {
+        newSet.add(deviceId);
+      }
+      return newSet;
+    });
+  };
+
+  // Fonction pour obtenir le badge de statut avec alertes
+  const getStatusBadge = (device, index) => {
+    let status = device.status || 'unknown';
+    let colorScheme = getStatusColor(status);
+
+    // Vérifier s'il y a des alertes pour ce dispositif
+    const deviceAlerts = systemHealth?.alerts?.filter(alert =>
+      alert.sensor_id === device.sensor_id ||
+      alert.device_id === device.sensor_id
+    ) || [];
+
+    const hasAlerts = deviceAlerts.length > 0;
+
+    // Modifier le statut si alertes
+    if (hasAlerts && status === 'online') {
+      status = 'warning';
+      colorScheme = 'orange';
+    }
+
+    const statusIcon = {
+      'online': '🟢',
+      'healthy': '🟢',
+      'offline': '🔴',
+      'warning': '🟡',
+      'critical': '🔴'
+    };
+
     return (
-      <Flex justify="center" align="center" minH="400px">
-        <VStack spacing={4}>
-          <Spinner size="xl" color="blue.500" />
-          <Text>Chargement de l'état technique...</Text>
-        </VStack>
-      </Flex>
+      <Badge colorScheme={colorScheme} variant="subtle">
+        {statusIcon[status] || '⚪'} {status}
+        {hasAlerts && <Text as="span" ml={1}>🚨</Text>}
+      </Badge>
     );
-  }
+  };
 
   return (
     <Box p={{ base: 0.5, md: 6 }} bg="gray.50" w="100%">
       <VStack spacing={{ base: 4, md: 6 }} align="stretch">
-        {/* Header */}
-        <Flex
-          direction={{ base: "column", lg: "row" }}
-          justify={{ lg: "space-between" }}
-          align={{ base: "stretch", lg: "center" }}
-          gap={4}
-        >
-          <Heading size="lg" color="blue.600">
-            ⚙️ Technical Monitoring
-          </Heading>
-        </Flex>
 
+        {/* Header simple */}
+        <StandardCard
+          title="⚙️ Technical Monitoring"
+          subtitle="Diagnostic technique du système TechTemp"
+          titleColor="blue.600"
+        >
+        </StandardCard>
+
+        {/* États des composants système - 3 cards séparées */}
+        <RaspberryPiCard
+          systemHealth={systemHealth}
+          realTimeAvailable={realTimeAvailable}
+        />
+
+        <FirebaseCard
+          fallbackData={firebaseDevicesData}
+          realTimeAvailable={realTimeAvailable}
+          systemHealth={systemHealth}
+        />
+
+        {/* Erreur détaillée si problème */}
         {error && (
           <Alert status="error">
             <AlertIcon />
-            {error}
+            <Box>
+              <Text fontWeight="bold">🔧 Diagnostic Technique - Problème détecté</Text>
+              <Text fontSize="sm" color="red.600" mt={1}>{error}</Text>
+              <Divider my={2} />
+              <Text fontSize="xs" color="gray.600">
+                <strong>Actions requises :</strong>
+                <br />1. Vérifier l'alimentation du Raspberry Pi
+                <br />2. Contrôler le service TechTemp sur le Pi
+                <br />3. Tester la connectivité réseau
+                <br />4. Vérifier les logs du serveur
+              </Text>
+            </Box>
           </Alert>
         )}
 
-        {systemHealth && (
-          <>
-            <TechnicalOverviewCard
-              systemHealth={systemHealth}
-              firebaseData={firebaseData}
-              technicalAlerts={technicalAlerts}
-            />
+        {/* Table des dispositifs responsive */}
+        <StandardCard
+          title={`📋 État des Capteurs (${realTimeAvailable && systemHealth?.devices?.length > 0 ? systemHealth.devices.length : firebaseDevicesData.devices?.length || 0})`}
+          titleColor="gray.700"
+        >
+          <VStack spacing={4} align="stretch">
+            <HStack spacing={2}>
+              <Badge colorScheme={realTimeAvailable ? 'green' : 'orange'} variant="outline">
+                {realTimeAvailable ? 'Raspberry Pi' : 'Firebase Backup'}
+              </Badge>
+              {systemHealth?.alerts?.length > 0 && (
+                <Badge colorScheme="red" variant="solid">
+                  🚨 {systemHealth.alerts.length} alerte{systemHealth.alerts.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+            </HStack>
 
-            <TechnicalAlertsCard alerts={technicalAlerts} />
+            {/* Tableau responsive des dispositifs */}
+            {(() => {
+              const devicesToShow = realTimeAvailable && systemHealth?.devices?.length > 0
+                ? systemHealth.devices
+                : firebaseDevicesData.devices || [];
 
-            <TechnicalDevicesTable
-              devices={devicesData.devices}
-              useRealTime={useRealTime}
-              readingInProgress={readingInProgress}
-              updatedDevices={updatedDevices}
-              onTriggerReading={triggerImmediateReading}
-              onToggleRealTime={handleToggleRealTime}
-            />
-          </>
-        )}
+              if (devicesToShow.length === 0) {
+                return (
+                  <Text color="red.500" textAlign="center" py={4}>
+                    ❌ Aucun dispositif accessible (ni Raspberry Pi ni Firebase)
+                  </Text>
+                );
+              }
+
+              // Version mobile accordéon
+              if (isMobile) {
+                return (
+                  <VStack spacing={2} align="stretch">
+                    {devicesToShow.map((device, index) => {
+                      const isExpanded = expandedDevices.has(device.sensor_id);
+
+                      return (
+                        <Card key={device.sensor_id || index} size="sm" variant="outline">
+                          <CardBody p={3}>
+                            {/* Ligne principale - toujours visible */}
+                            <HStack
+                              justify="space-between"
+                              cursor="pointer"
+                              onClick={() => toggleDevice(device.sensor_id)}
+                            >
+                              <HStack spacing={3} flex={1}>
+                                <IconButton
+                                  icon={isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+                                  size="xs"
+                                  variant="ghost"
+                                  aria-label="Expand device details"
+                                />
+                                <VStack spacing={0} align="start">
+                                  <Text fontWeight="bold" fontSize="sm">
+                                    {device.room_name || `Dispositif ${index + 1}`}
+                                  </Text>
+                                  <HStack spacing={2}>
+                                    {getStatusBadge(device, index)}
+                                    <Text fontSize="xs" color="gray.600">
+                                      ID: {device.sensor_id || 'N/A'}
+                                    </Text>
+                                  </HStack>
+                                </VStack>
+                              </HStack>
+                            </HStack>
+
+                            {/* Détails - collapsible */}
+                            <Collapse in={isExpanded}>
+                              <Box mt={3} pt={3} borderTop="1px" borderColor="gray.200">
+                                <VStack spacing={2} align="stretch">
+                                  <HStack justify="space-between">
+                                    <Text fontSize="xs" color="gray.600">Device ID:</Text>
+                                    <Text fontSize="xs" fontFamily="mono">{device.sensor_id || 'N/A'}</Text>
+                                  </HStack>
+                                  <HStack justify="space-between">
+                                    <Text fontSize="xs" color="gray.600">Room ID:</Text>
+                                    <Text fontSize="xs" fontFamily="mono">{device.room_id || 'N/A'}</Text>
+                                  </HStack>
+                                  <HStack justify="space-between">
+                                    <Text fontSize="xs" color="gray.600">Température:</Text>
+                                    <Text fontSize="xs">
+                                      {device.temperature !== undefined && device.temperature !== null && !isNaN(device.temperature) ? `${Number(device.temperature).toFixed(1)}°C` : 'N/A'}
+                                    </Text>
+                                  </HStack>
+                                  <HStack justify="space-between">
+                                    <Text fontSize="xs" color="gray.600">Humidité:</Text>
+                                    <Text fontSize="xs">
+                                      {device.humidity !== undefined && device.humidity !== null && !isNaN(device.humidity) ? `${Number(device.humidity).toFixed(1)}%` : 'N/A'}
+                                    </Text>
+                                  </HStack>
+                                  <HStack justify="space-between">
+                                    <Text fontSize="xs" color="gray.600">Dernière lecture:</Text>
+                                    <Text fontSize="xs">{formatLastSeen(device.last_seen)}</Text>
+                                  </HStack>
+                                </VStack>
+                              </Box>
+                            </Collapse>
+                          </CardBody>
+                        </Card>
+                      );
+                    })}
+                  </VStack>
+                );
+              }
+
+              // Version desktop tableau
+              return (
+                <Table size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th>Pièce</Th>
+                      <Th>Statut</Th>
+                      <Th>Device ID</Th>
+                      <Th>Room ID</Th>
+                      <Th>Température</Th>
+                      <Th>Humidité</Th>
+                      <Th>Dernière lecture</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {devicesToShow.map((device, index) => (
+                      <Tr key={device.sensor_id || index}>
+                        <Td fontWeight="medium">{device.room_name || `Dispositif ${index + 1}`}</Td>
+                        <Td>{getStatusBadge(device, index)}</Td>
+                        <Td fontFamily="mono" fontSize="sm">{device.sensor_id || 'N/A'}</Td>
+                        <Td fontFamily="mono" fontSize="sm">{device.room_id || 'N/A'}</Td>
+                        <Td>
+                          {device.temperature !== undefined && device.temperature !== null && !isNaN(device.temperature) ? `${Number(device.temperature).toFixed(1)}°C` : 'N/A'}
+                        </Td>
+                        <Td>
+                          {device.humidity !== undefined && device.humidity !== null && !isNaN(device.humidity) ? `${Number(device.humidity).toFixed(1)}%` : 'N/A'}
+                        </Td>
+                        <Td fontSize="sm">{formatLastSeen(device.last_seen)}</Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              );
+            })()}
+          </VStack>
+        </StandardCard>
       </VStack>
     </Box>
   );

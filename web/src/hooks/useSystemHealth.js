@@ -65,7 +65,17 @@ export const useSystemHealth = () => {
         throw new Error('Mode Firebase demandé');
       }
     } catch (err) {
-      console.warn('⚠️ Temps réel indisponible, fallback vers Firebase:', err.message);
+      // Diagnostic détaillé de l'erreur
+      let diagnosticMessage = 'Erreur inconnue';
+      if (err.message.includes('Timeout')) {
+        diagnosticMessage = `Serveur Raspberry Pi (192.168.0.42:8080) ne répond pas - Timeout après 2s`;
+      } else if (err.message.includes('Failed to fetch')) {
+        diagnosticMessage = `Impossible de joindre le serveur Raspberry Pi (192.168.0.42:8080) - Vérifiez que le serveur est démarré`;
+      } else {
+        diagnosticMessage = `Erreur serveur Raspberry Pi: ${err.message}`;
+      }
+
+      console.warn('⚠️ Temps réel indisponible, fallback vers Firebase:', diagnosticMessage);
 
       try {
         const firebaseResponse = await fetch(API_ENDPOINTS.FIREBASE_HEALTH, { timeout: 5000 });
@@ -80,10 +90,10 @@ export const useSystemHealth = () => {
           if (!fallbackToastShown) {
             setFallbackToastShown(true);
             toast({
-              title: "Basculement automatique",
-              description: "Temps réel indisponible, utilisation de Firebase",
+              title: "🔄 Basculement automatique vers Firebase",
+              description: diagnosticMessage,
               status: "warning",
-              duration: 3000,
+              duration: 5000,
               isClosable: true,
             });
           }
@@ -145,7 +155,15 @@ export const useSystemHealth = () => {
 
     try {
       console.log('🔍 Test de connexion temps réel...');
-      const response = await fetch(API_ENDPOINTS.LOCAL_HEALTH, { timeout: 3000 });
+
+      // Test avec timeout plus long pour diagnostic
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(API_ENDPOINTS.LOCAL_HEALTH, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         console.log('✅ Temps réel disponible !');
@@ -153,24 +171,33 @@ export const useSystemHealth = () => {
         setFallbackToastShown(false);
 
         toast({
-          title: "Connexion temps réel réussie",
-          description: "Le serveur local est accessible. Vous pouvez maintenant utiliser le mode temps réel.",
+          title: "✅ Connexion temps réel réussie",
+          description: `Serveur Raspberry Pi (192.168.0.42:8080) accessible - Status: ${response.status}`,
           status: "success",
           duration: 4000,
           isClosable: true,
         });
       } else {
-        throw new Error('Serveur local non accessible');
+        throw new Error(`Serveur répond mais erreur HTTP ${response.status}`);
       }
     } catch (err) {
       console.log('⏳ Temps réel toujours indisponible:', err.message);
       setRealTimeAvailable(false);
 
+      let diagnosticDetail = 'Erreur inconnue';
+      if (err.name === 'AbortError') {
+        diagnosticDetail = 'Timeout après 5s - Le serveur ne répond pas';
+      } else if (err.message.includes('Failed to fetch')) {
+        diagnosticDetail = 'Impossible de joindre 192.168.0.42:8080 - Serveur probablement arrêté';
+      } else {
+        diagnosticDetail = err.message;
+      }
+
       toast({
-        title: "Temps réel indisponible",
-        description: "Le serveur local n'est pas accessible. Continuez avec Firebase.",
+        title: "❌ Diagnostic réseau",
+        description: `Test échoué: ${diagnosticDetail}`,
         status: "warning",
-        duration: 4000,
+        duration: 6000,
         isClosable: true,
       });
     } finally {

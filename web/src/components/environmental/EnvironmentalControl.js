@@ -11,8 +11,6 @@ import {
   FormControl,
   FormLabel,
   HStack,
-  Card,
-  CardBody,
   Button
 } from '@chakra-ui/react';
 import { RepeatIcon } from '@chakra-ui/icons';
@@ -24,6 +22,7 @@ import { useReadingsData } from '../../useReadingsData';
 import EnvironmentalOverviewCard from './EnvironmentalOverviewCard';
 import EnvironmentalDevicesGrid from './EnvironmentalDevicesGrid';
 import ReadingsChart from '../../ReadingsChart';
+import StandardCard from '../common/StandardCard';
 
 const EnvironmentalControl = () => {
   // Hooks personnalisés pour la logique métier
@@ -124,38 +123,41 @@ const EnvironmentalControl = () => {
           <Alert status="error">
             <AlertIcon />
             <Box>
-              <Text fontWeight="bold">Erreur de connexion</Text>
+              <Text fontWeight="bold">🔌 Problème de connexion serveur</Text>
               <Text fontSize="sm">{error}</Text>
               <Text fontSize="xs" mt={2} color="gray.600">
-                Vérifiez que les services suivants sont démarrés :
-                <br />• Serveur API local (port 8080)
-                <br />• Base de données Firebase
-                <br />• Connectivité réseau
+                <strong>Diagnostic automatique :</strong>
+                <br />📍 Serveur Raspberry Pi : <code>192.168.0.42:8080</code>
+                <br />🔍 Vérifications à effectuer :
+                <br />• Le Raspberry Pi est-il allumé ?
+                <br />• Le serveur TechTemp est-il démarré sur le Pi ?
+                <br />• Le port 8080 est-il ouvert ?
+                <br />• La connectivité réseau est-elle OK ?
               </Text>
             </Box>
           </Alert>
         )}
 
         {!systemHealth && !loading && (
-          <Card>
-            <CardBody>
-              <VStack spacing={4} align="center" py={8}>
-                <Text fontSize="4xl">📡</Text>
-                <Heading size="md" color="gray.600">Aucune donnée disponible</Heading>
-                <Text fontSize="sm" color="gray.500" textAlign="center">
-                  Impossible de récupérer les données des capteurs.
-                  <br />Vérifiez la connexion aux services.
-                </Text>
-                <Button
-                  colorScheme="blue"
-                  onClick={refreshCurrentMode}
-                  size="sm"
-                >
-                  Réessayer
-                </Button>
-              </VStack>
-            </CardBody>
-          </Card>
+          <StandardCard
+            title="📡 Aucune donnée disponible"
+            titleColor="gray.600"
+          >
+            <VStack spacing={4} align="center" py={8}>
+              <Text fontSize="4xl">📡</Text>
+              <Text fontSize="sm" color="gray.500" textAlign="center">
+                Impossible de récupérer les données des capteurs.
+                <br />Vérifiez la connexion aux services.
+              </Text>
+              <Button
+                colorScheme="blue"
+                onClick={refreshCurrentMode}
+                size="sm"
+              >
+                Réessayer
+              </Button>
+            </VStack>
+          </StandardCard>
         )}
 
         {/* Section 1: Vue d'ensemble - Firebase seulement, affichage immédiat */}
@@ -166,87 +168,84 @@ const EnvironmentalControl = () => {
         />
 
         {/* Section 2: Graphiques & Tendances */}
-        <Card>
-          <CardBody>
-            <Box>
-              <ReadingsChart
-                data={chartData}
-                loading={chartLoading}
-                error={chartError}
-                selectedRooms={selectedRoomNames}
-                startDate={startTimestamp}
-                endDate={endTimestamp}
-                rooms={rooms}
-                setSelectedRooms={handleSelectedRoomsChange}
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
-              />
-            </Box>
-          </CardBody>
-        </Card>
+        <StandardCard
+          title="📊 Graphiques & Tendances"
+          titleColor="blue.700"
+        >
+          <ReadingsChart
+            data={chartData}
+            loading={chartLoading}
+            error={chartError}
+            selectedRooms={selectedRoomNames}
+            startDate={startTimestamp}
+            endDate={endTimestamp}
+            rooms={rooms}
+            setSelectedRooms={handleSelectedRoomsChange}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+          />
+        </StandardCard>
 
         {/* Section 3: Contrôle par pièce */}
-        <Card>
-          <CardBody>
-            <VStack spacing={4} align="stretch">
-              <Flex justify="space-between" align="center">
-                <Heading size="md" color="blue.700">
-                  Contrôle par pièce
-                </Heading>
-                <HStack spacing={4}>
+        <StandardCard
+          title="🏠 Contrôle par pièce"
+          titleColor="blue.700"
+        >
+          <VStack spacing={4} align="stretch">
+            <Flex justify="space-between" align="center">
+              <HStack spacing={4}>
+                <Button
+                  size="sm"
+                  colorScheme="blue"
+                  variant="outline"
+                  onClick={refreshCurrentMode}
+                  isLoading={loading}
+                  leftIcon={<RepeatIcon />}
+                >
+                  Actualiser
+                </Button>
+                {!realTimeAvailable && (
                   <Button
                     size="sm"
-                    colorScheme="blue"
+                    colorScheme="orange"
                     variant="outline"
-                    onClick={refreshCurrentMode}
-                    isLoading={loading}
-                    leftIcon={<RepeatIcon />}
+                    onClick={testRealTimeConnection}
+                    isLoading={testingRealTime}
+                    loadingText="Test en cours..."
                   >
-                    Actualiser
+                    Tester temps réel
                   </Button>
-                  {!realTimeAvailable && (
-                    <Button
-                      size="sm"
-                      colorScheme="orange"
-                      variant="outline"
-                      onClick={testRealTimeConnection}
-                      isLoading={testingRealTime}
-                      loadingText="Test en cours..."
-                    >
-                      Tester temps réel
-                    </Button>
-                  )}
-                  <FormControl display="flex" alignItems="center" w="auto">
-                    <FormLabel htmlFor="devices-realtime-switch" mb="0" fontSize="sm" color="gray.500">
-                      Temps réel
-                      {!realTimeAvailable && (
-                        <Text as="span" color="orange.500" fontSize="xs" ml={1}>
-                          (indisponible)
-                        </Text>
-                      )}
-                    </FormLabel>
-                    <Switch
-                      id="devices-realtime-switch"
-                      size="sm"
-                      isChecked={useRealTimeForDevices}
-                      onChange={handleToggleDevicesRealTime}
-                      colorScheme={realTimeAvailable ? "green" : "orange"}
-                      isDisabled={!realTimeAvailable}
-                    />
-                  </FormControl>
-                </HStack>
-              </Flex>
+                )}
+                <FormControl display="flex" alignItems="center" w="auto">
+                  <FormLabel htmlFor="devices-realtime-switch" mb="0" fontSize="sm" color="gray.500">
+                    Temps réel
+                    {!realTimeAvailable && (
+                      <Text as="span" color="orange.500" fontSize="xs" ml={1}>
+                        (indisponible)
+                      </Text>
+                    )}
+                  </FormLabel>
+                  <Switch
+                    id="devices-realtime-switch"
+                    size="sm"
+                    isChecked={useRealTimeForDevices}
+                    onChange={handleToggleDevicesRealTime}
+                    colorScheme={realTimeAvailable ? "green" : "orange"}
+                    isDisabled={!realTimeAvailable}
+                  />
+                </FormControl>
+              </HStack>
+            </Flex>
 
-              <EnvironmentalDevicesGrid
-                devices={devicesData.devices}
-                environmentalAlerts={environmentalAlerts}
-                onTriggerReading={useRealTimeForDevices ? triggerImmediateReading : null}
-                readingInProgress={readingInProgress}
-                updatedDevices={updatedDevices}
-              />
-            </VStack>
-          </CardBody>
-        </Card>
+            <EnvironmentalDevicesGrid
+              devices={devicesData.devices}
+              environmentalAlerts={environmentalAlerts}
+              onTriggerReading={useRealTimeForDevices ? triggerImmediateReading : null}
+              readingInProgress={readingInProgress}
+              updatedDevices={updatedDevices}
+            />
+          </VStack>
+        </StandardCard>
       </VStack>
     </Box>
   );
