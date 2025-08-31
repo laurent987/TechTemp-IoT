@@ -7,7 +7,7 @@ import { API_ENDPOINTS } from '../utils/systemMonitoringHelpers';
  * Centralise la logique de déclenchement de lectures et de marquage des devices
  */
 export const useDeviceReadings = (systemHealth, useRealTimeForDevices, onRefresh) => {
-  const [readingInProgress, setReadingInProgress] = useState(new Set());
+  const [manualReadingInProgress, setManualReadingInProgress] = useState(new Set());
   const [updatedDevices, setUpdatedDevices] = useState(new Set());
   const toast = useToast();
 
@@ -37,7 +37,7 @@ export const useDeviceReadings = (systemHealth, useRealTimeForDevices, onRefresh
     }
 
     const readingKey = sensorId || 'all';
-    setReadingInProgress(prev => new Set([...prev, readingKey]));
+    setManualReadingInProgress(prev => new Set([...prev, readingKey]));
 
     try {
       const body = sensorId ? JSON.stringify({ sensor_id: sensorId }) : "{}";
@@ -69,7 +69,7 @@ export const useDeviceReadings = (systemHealth, useRealTimeForDevices, onRefresh
 
         if (onRefresh) onRefresh();
 
-        setReadingInProgress(prev => {
+        setManualReadingInProgress(prev => {
           const newSet = new Set(prev);
           newSet.delete(readingKey);
           return newSet;
@@ -77,7 +77,7 @@ export const useDeviceReadings = (systemHealth, useRealTimeForDevices, onRefresh
       }, 2000);
 
     } catch (err) {
-      setReadingInProgress(prev => {
+      setManualReadingInProgress(prev => {
         const newSet = new Set(prev);
         newSet.delete(readingKey);
         return newSet;
@@ -94,7 +94,7 @@ export const useDeviceReadings = (systemHealth, useRealTimeForDevices, onRefresh
   }, [useRealTimeForDevices, systemHealth, toast, markDeviceAsUpdated, onRefresh]);
 
   return {
-    readingInProgress,
+    manualReadingInProgress,
     updatedDevices,
     triggerImmediateReading,
     markDeviceAsUpdated

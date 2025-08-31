@@ -26,7 +26,7 @@ const SystemMonitoring = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [useRealTime, setUseRealTime] = useState(true);
-  const [readingInProgress, setReadingInProgress] = useState(new Set());
+  const [manualReadingInProgress, setManualReadingInProgress] = useState(new Set());
   const [updatedDevices, setUpdatedDevices] = useState(new Set());
   // const [testDevices, setTestDevices] = useState([]);
   // const [isTestMode, setIsTestMode] = useState(false);
@@ -120,7 +120,7 @@ const SystemMonitoring = () => {
     }
 
     const readingKey = sensorId || 'all';
-    setReadingInProgress(prev => new Set([...prev, readingKey]));
+    setManualReadingInProgress(prev => new Set([...prev, readingKey]));
 
     try {
       const body = sensorId ? JSON.stringify({ sensor_id: sensorId }) : "{}";
@@ -150,14 +150,14 @@ const SystemMonitoring = () => {
           markDeviceAsUpdated(allDeviceIds);
         }
         fetchSystemHealth();
-        setReadingInProgress(prev => {
+        setManualReadingInProgress(prev => {
           const newSet = new Set(prev);
           newSet.delete(readingKey);
           return newSet;
         });
       }, 2000);
     } catch (err) {
-      setReadingInProgress(prev => {
+      setManualReadingInProgress(prev => {
         const newSet = new Set(prev);
         newSet.delete(readingKey);
         return newSet;
@@ -240,7 +240,7 @@ const SystemMonitoring = () => {
             <DevicesGrid
               devices={devicesData.devices}
               useRealTime={useRealTime}
-              readingInProgress={readingInProgress}
+              readingInProgress={manualReadingInProgress}
               updatedDevices={updatedDevices}
               onTriggerReading={triggerImmediateReading}
               onToggleRealTime={handleToggleRealTime}

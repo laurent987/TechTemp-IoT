@@ -1,7 +1,7 @@
 import React from "react";
-import { colorForRoom } from './colors';
-import WeatherChart from './components/WeatherChart';
-import ChartFiltersMenu from './components/environmental/ChartFiltersMenu';
+import { colorForRoom } from '../../colors';
+import WeatherChart from '../WeatherChart';
+import ChartFiltersMenu from './ChartFiltersMenu';
 import {
   Box,
   Heading,

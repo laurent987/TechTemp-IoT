@@ -21,7 +21,7 @@ import { useDeviceReadings } from '../../hooks/useDeviceReadings';
 import { useReadingsData } from '../../useReadingsData';
 import EnvironmentalOverviewCard from './EnvironmentalOverviewCard';
 import EnvironmentalDevicesGrid from './EnvironmentalDevicesGrid';
-import ReadingsChart from '../../ReadingsChart';
+import ReadingsChart from './ReadingsChart';
 import StandardCard from '../common/StandardCard';
 
 const EnvironmentalControl = () => {
@@ -46,7 +46,7 @@ const EnvironmentalControl = () => {
     useRealTimeForDevices,
     refreshCurrentMode
   );
-  const { readingInProgress, updatedDevices, triggerImmediateReading } = deviceReadingsHook;
+  const { manualReadingInProgress, updatedDevices, triggerImmediateReading } = deviceReadingsHook;
 
   // État pour les graphiques
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -194,16 +194,32 @@ const EnvironmentalControl = () => {
           <VStack spacing={4} align="stretch">
             <Flex justify="space-between" align="center">
               <HStack spacing={4}>
-                <Button
-                  size="sm"
-                  colorScheme="blue"
-                  variant="outline"
-                  onClick={refreshCurrentMode}
-                  isLoading={loading}
-                  leftIcon={<RepeatIcon />}
-                >
-                  Actualiser
-                </Button>
+                {useRealTimeForDevices ? (
+                  // Mode temps réel : Bouton pour déclencher une mesure
+                  <Button
+                    size="sm"
+                    colorScheme="green"
+                    variant="outline"
+                    onClick={() => triggerImmediateReading()}
+                    isLoading={manualReadingInProgress.has('all')}
+                    loadingText="Mesure en cours..."
+                    leftIcon={<RepeatIcon />}
+                  >
+                    📊 Déclencher mesure
+                  </Button>
+                ) : (
+                  // Mode Firebase : Bouton pour actualiser les données
+                  <Button
+                    size="sm"
+                    colorScheme="blue"
+                    variant="outline"
+                    onClick={refreshCurrentMode}
+                    isLoading={loading}
+                    leftIcon={<RepeatIcon />}
+                  >
+                    🔄 Actualiser données
+                  </Button>
+                )}
                 {!realTimeAvailable && (
                   <Button
                     size="sm"
@@ -241,7 +257,7 @@ const EnvironmentalControl = () => {
               devices={devicesData.devices}
               environmentalAlerts={environmentalAlerts}
               onTriggerReading={useRealTimeForDevices ? triggerImmediateReading : null}
-              readingInProgress={readingInProgress}
+              readingInProgress={manualReadingInProgress}
               updatedDevices={updatedDevices}
             />
           </VStack>

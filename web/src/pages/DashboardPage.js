@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Flex, useBreakpointValue } from '@chakra-ui/react';
 import SidebarFilters from '../SidebarFilters';
-import ReadingsChart from '../ReadingsChart';
+import ReadingsChart from '../components/environmental/ReadingsChart';
 import { useReadingsData } from '../useReadingsData';
 
 export default function DashboardPage() {
