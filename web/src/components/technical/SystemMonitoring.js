@@ -12,8 +12,8 @@ import {
   Button
 } from '@chakra-ui/react';
 import { API_ENDPOINTS } from '../../config/api.endpoints';
-import { useDevicesData } from '../../hooks/useDevicesData';
-// Utiliser le nouveau wrapper à la place de l'ancien hook
+// Utiliser les nouveaux wrappers à la place des anciens hooks
+import { useDevicesDataNew as useDevicesData } from '../../hooks/useDevicesDataNew';
 import { useDeviceAlertsNew as useDeviceAlerts } from '../../hooks/useDeviceAlertsNew';
 import { debugDeviceTimestamps } from '../../utils/debugTimestamps';
 import { debugFirebaseData } from '../../debug_firebase_data';
