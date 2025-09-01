@@ -39,7 +39,12 @@ const SystemMonitoring = () => {
   // Utiliser notre hook personnalisé pour traiter les données des devices
   // En mode test, utiliser les devices de test, sinon les vraies données
   // const currentDevices = isTestMode ? testDevices : systemHealth?.devices;
+  console.log('SystemMonitoring - Avant d\'appeler useDevicesData:', { 
+    rawDevices: systemHealth?.devices, 
+    useRealTime 
+  });
   const devicesData = useDevicesData(systemHealth?.devices, useRealTime);
+  console.log('SystemMonitoring - Résultat de useDevicesData:', devicesData);
   // Le nouveau hook useDeviceAlerts n'a pas besoin des devices en paramètre
   const deviceAlerts = useDeviceAlerts();
 
@@ -63,6 +68,8 @@ const SystemMonitoring = () => {
 
     try {
       const apiUrl = useRealTime ? API_ENDPOINTS.LOCAL_HEALTH : API_ENDPOINTS.FIREBASE_HEALTH;
+      console.log('SystemMonitoring - Fetching data from:', apiUrl, 'Mode temps réel:', useRealTime);
+      
       const response = await fetch(apiUrl);
 
       if (!response.ok) {
@@ -70,6 +77,16 @@ const SystemMonitoring = () => {
       }
 
       const data = await response.json();
+      console.log('SystemMonitoring - Données reçues:', data);
+      
+      // Vérification des données de température et humidité
+      if (data?.devices) {
+        console.log('SystemMonitoring - Températures et humidité dans les données brutes:');
+        data.devices.forEach(device => {
+          console.log(`Device ${device.sensor_id}: last_temperature = ${device.last_temperature}, last_humidity = ${device.last_humidity}`);
+        });
+      }
+      
       setSystemHealth(data);
     } catch (err) {
       setError(err.message);
@@ -179,8 +196,12 @@ const SystemMonitoring = () => {
   }, [useRealTime, systemHealth, toast, fetchSystemHealth, markDeviceAsUpdated]);
 
   const handleToggleRealTime = useCallback(() => {
-    setUseRealTime(!useRealTime);
-  }, [useRealTime]);
+    setUseRealTime(prevState => !prevState);
+    // On rafraîchit les données à chaque changement de mode
+    setTimeout(() => {
+      fetchSystemHealth();
+    }, 100);
+  }, [fetchSystemHealth]);
 
   useEffect(() => {
     fetchSystemHealth();

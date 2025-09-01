@@ -25,6 +25,27 @@ import {
 } from '../../utils/systemMonitoringHelpers';
 
 const DeviceCard = ({ device, useRealTime, readingInProgress, updatedDevices, onTriggerReading }) => {
+  // Log complet très détaillé
+  console.log('🔍 DEVICE CARD DEBUG 🔍');
+  console.log('------------------------------------');
+  console.log(`Device ID: ${device.sensor_id}`);
+  console.log(`Room: ${device.room_name} (ID: ${device.room_id})`);
+  console.log(`Status: ${device.status}`);
+  console.log(`Mode temps réel: ${useRealTime ? 'OUI' : 'NON'}`);
+  console.log('VALEURS DE TEMPÉRATURE:');
+  console.log(`- temperature: ${device.temperature} (type: ${typeof device.temperature})`);
+  console.log(`- last_temperature: ${device.last_temperature} (type: ${typeof device.last_temperature})`);
+  console.log('VALEURS D\'HUMIDITÉ:');
+  console.log(`- humidity: ${device.humidity} (type: ${typeof device.humidity})`);
+  console.log(`- last_humidity: ${device.last_humidity} (type: ${typeof device.last_humidity})`);
+  console.log('AUTRES PROPRIÉTÉS:');
+  console.log(`- temperaturePrecision: ${device.temperaturePrecision}`);
+  console.log(`- humidityPrecision: ${device.humidityPrecision}`);
+  console.log(`- last_seen: ${device.last_seen}`);
+  console.log('OBJET COMPLET:');
+  console.log(JSON.stringify(device, null, 2));
+  console.log('------------------------------------');
+  
   const isReading = readingInProgress.has(device.sensor_id);
   const isUpdated = updatedDevices.has(device.sensor_id);
 
@@ -66,7 +87,33 @@ const DeviceCard = ({ device, useRealTime, readingInProgress, updatedDevices, on
               >
                 <MetricContent
                   icon="🌡️"
-                  value={device.temperature?.toFixed(device.temperaturePrecision || 1)}
+                  value={(() => {
+                    console.log(`DeviceCard parsing - Valeurs pour device ${device.sensor_id}:`, {
+                      last_temp_raw: device.last_temperature,
+                      temp_raw: device.temperature,
+                      last_temp_type: typeof device.last_temperature,
+                      temp_type: typeof device.temperature
+                    });
+                    
+                    // Utiliser last_temperature en priorité s'il est disponible
+                    if (device.last_temperature !== undefined && device.last_temperature !== null) {
+                      // S'assurer que c'est un nombre
+                      const temp = typeof device.last_temperature === 'number' 
+                        ? device.last_temperature 
+                        : parseFloat(device.last_temperature);
+                      return isNaN(temp) ? 'N/A' : temp.toFixed(1);
+                    }
+                    // Sinon utiliser temperature s'il est disponible
+                    else if (device.temperature !== undefined && device.temperature !== null) {
+                      // S'assurer que c'est un nombre
+                      const temp = typeof device.temperature === 'number' 
+                        ? device.temperature 
+                        : parseFloat(device.temperature);
+                      return isNaN(temp) ? 'N/A' : temp.toFixed(1);
+                    }
+                    // Si aucune des deux propriétés n'est disponible ou sont null/undefined
+                    return 'N/A';
+                  })()}
                   unit="°C"
                   color="red.500"
                   unitColor="red.400"
@@ -84,9 +131,35 @@ const DeviceCard = ({ device, useRealTime, readingInProgress, updatedDevices, on
               >
                 <MetricContent
                   icon="💧"
-                  value={device.humidity?.toFixed(device.humidityPrecision || 1)}
+                  value={(() => {
+                    console.log(`DeviceCard parsing - Humidité pour device ${device.sensor_id}:`, {
+                      last_hum_raw: device.last_humidity,
+                      hum_raw: device.humidity,
+                      last_hum_type: typeof device.last_humidity,
+                      hum_type: typeof device.humidity
+                    });
+                    
+                    // Utiliser last_humidity en priorité s'il est disponible
+                    if (device.last_humidity !== undefined && device.last_humidity !== null) {
+                      // S'assurer que c'est un nombre
+                      const hum = typeof device.last_humidity === 'number' 
+                        ? device.last_humidity 
+                        : parseFloat(device.last_humidity);
+                      return isNaN(hum) ? 'N/A' : hum.toFixed(0);
+                    }
+                    // Sinon utiliser humidity s'il est disponible
+                    else if (device.humidity !== undefined && device.humidity !== null) {
+                      // S'assurer que c'est un nombre
+                      const hum = typeof device.humidity === 'number' 
+                        ? device.humidity 
+                        : parseFloat(device.humidity);
+                      return isNaN(hum) ? 'N/A' : hum.toFixed(0);
+                    }
+                    // Si aucune des deux propriétés n'est disponible ou sont null/undefined
+                    return 'N/A';
+                  })()}
                   unit="%"
-                  color={getHumidityColor(device.humidity)}
+                  color={getHumidityColor(device.last_humidity || device.humidity)}
                   unitColor="blue.400"
                   label="Humidité"
                 />

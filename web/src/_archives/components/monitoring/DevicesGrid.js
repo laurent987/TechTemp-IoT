@@ -72,16 +72,29 @@ const DevicesGrid = ({
         <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", xl: "repeat(3, 1fr)" }} gap={{ base: 4, md: 6 }}>
           {devices
             .sort((a, b) => a.sensor_id - b.sensor_id)
-            .map((device) => (
-              <DeviceCard
-                key={device.sensor_id}
-                device={device}
-                useRealTime={useRealTime}
-                readingInProgress={readingInProgress}
-                updatedDevices={updatedDevices}
-                onTriggerReading={onTriggerReading}
-              />
-            ))}
+            .map((device) => {
+              console.log('🔍 DEVICES GRID DEBUG 🔍');
+              console.log('------------------------------------');
+              console.log(`Appareil: ${device.sensor_id} - ${device.room_name}`);
+              console.log(`Mode temps réel: ${useRealTime ? 'OUI' : 'NON'}`);
+              console.log(`TOUTES LES CLÉS DE L'OBJET: ${Object.keys(device).join(', ')}`);
+              console.log(`Température (temperature): ${device.temperature}`);
+              console.log(`Température (last_temperature): ${device.last_temperature}`);
+              console.log(`Humidité (humidity): ${device.humidity}`);
+              console.log(`Humidité (last_humidity): ${device.last_humidity}`);
+              console.log('------------------------------------');
+              
+              return (
+                <DeviceCard
+                  key={device.sensor_id}
+                  device={device}
+                  useRealTime={useRealTime}
+                  readingInProgress={readingInProgress}
+                  updatedDevices={updatedDevices}
+                  onTriggerReading={onTriggerReading}
+                />
+              );
+            })}
         </Grid>
       </CardBody>
     </Card>
