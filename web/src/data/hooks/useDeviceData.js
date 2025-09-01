@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useContext } from 'react';
-import { DataContextProvider } from './DataContextProvider';
+import { DataContextProvider } from '../context/DataContextProvider';
 
 /**
  * Hook pour accéder aux données historiques d'un appareil
