@@ -45,7 +45,7 @@ describe('deviceDataTransformer', () => {
       const deviceWithMissingData = {
         ...mockDevice,
         last_temperature: undefined,
-        avg_humidity: undefined
+        last_humidity: undefined
       };
 
       const result = transformDeviceData(deviceWithMissingData, true);

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useToast } from '@chakra-ui/react';
-import { API_ENDPOINTS } from '../utils/systemMonitoringHelpers';
+import { API_ENDPOINTS } from '../config/api.endpoints';
 
 /**
  * Hook personnalisé pour gérer l'état de santé du système

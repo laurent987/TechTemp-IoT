@@ -5,11 +5,16 @@
  * @returns {Object} Device avec des champs uniformisés
  */
 export const transformDeviceData = (device, useRealTime) => {
+  // Déterminer les valeurs de température et d'humidité
+  const temperature = useRealTime ? device.last_temperature : device.avg_temperature;
+  const humidity = useRealTime ? device.last_humidity : device.avg_humidity;
+
   return {
     ...device,
     // Champs uniformisés - toujours les mêmes noms
-    temperature: useRealTime ? device.last_temperature : device.avg_temperature,
-    humidity: useRealTime ? device.last_humidity : device.avg_humidity,
+    // Si la valeur est undefined, ne pas inclure la propriété
+    ...(temperature !== undefined && { temperature }),
+    ...(humidity !== undefined && { humidity }),
 
     // Métadonnées pour l'affichage
     temperaturePrecision: useRealTime ? 1 : 1,

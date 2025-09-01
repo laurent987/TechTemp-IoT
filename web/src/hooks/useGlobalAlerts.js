@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { API_ENDPOINTS } from '../utils/systemMonitoringHelpers';
+import { API_ENDPOINTS } from '../config/api.endpoints';
 import { useDevicesData, useDeviceAlerts } from './useDevicesData';
 
 /**

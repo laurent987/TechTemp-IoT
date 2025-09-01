@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@chakra-ui/react';
-import { API_ENDPOINTS } from '../utils/systemMonitoringHelpers';
+import { API_ENDPOINTS } from '../config/api.endpoints';
 
 /**
  * Hook pour gérer les lectures immédiates des capteurs

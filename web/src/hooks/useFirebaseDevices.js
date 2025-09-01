@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { API_ENDPOINTS } from '../utils/systemMonitoringHelpers';
+import { API_ENDPOINTS } from '../config/api.endpoints';
 import { useDevicesData } from './useDevicesData';
 
 /**

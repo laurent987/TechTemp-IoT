@@ -8,11 +8,13 @@ import {
   VStack,
   Flex,
   useToast,
-  Heading
+  Heading,
+  Button
 } from '@chakra-ui/react';
-import { API_ENDPOINTS } from '../../utils/systemMonitoringHelpers';
+import { API_ENDPOINTS } from '../../config/api.endpoints';
 import { useDevicesData, useDeviceAlerts } from '../../hooks/useDevicesData';
 import { debugDeviceTimestamps } from '../../utils/debugTimestamps';
+import { debugFirebaseData } from '../../debug_firebase_data';
 import OverviewCard from '../monitoring/OverviewCard';
 import DatabaseValidationCard from '../monitoring/DatabaseValidationCard';
 import DevicesGrid from '../monitoring/DevicesGrid';
@@ -206,6 +208,14 @@ const SystemMonitoring = () => {
           <Heading size="lg" color="blue.600">
             🖥️ Monitoring Système IoT
           </Heading>
+          <Button
+            colorScheme="purple"
+            size="sm"
+            onClick={() => debugFirebaseData()}
+            title="Cliquez pour déboguer les données Firebase dans la console"
+          >
+            Debug Firebase Data
+          </Button>
         </Flex>
 
         {error && (
