@@ -12,7 +12,9 @@ import {
   Button
 } from '@chakra-ui/react';
 import { API_ENDPOINTS } from '../../config/api.endpoints';
-import { useDevicesData, useDeviceAlerts } from '../../hooks/useDevicesData';
+import { useDevicesData } from '../../hooks/useDevicesData';
+// Utiliser le nouveau wrapper à la place de l'ancien hook
+import { useDeviceAlertsNew as useDeviceAlerts } from '../../hooks/useDeviceAlertsNew';
 import { debugDeviceTimestamps } from '../../utils/debugTimestamps';
 import { debugFirebaseData } from '../../debug_firebase_data';
 import OverviewCard from '../monitoring/OverviewCard';
@@ -38,7 +40,8 @@ const SystemMonitoring = () => {
   // En mode test, utiliser les devices de test, sinon les vraies données
   // const currentDevices = isTestMode ? testDevices : systemHealth?.devices;
   const devicesData = useDevicesData(systemHealth?.devices, useRealTime);
-  const deviceAlerts = useDeviceAlerts(devicesData.devices);
+  // Le nouveau hook useDeviceAlerts n'a pas besoin des devices en paramètre
+  const deviceAlerts = useDeviceAlerts();
 
   // Gestionnaire pour les devices de test
   // const handleTestDevicesChange = useCallback((devices) => {
