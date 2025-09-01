@@ -29,6 +29,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:coverage": "react-scripts test --coverage",
+    "test:coverage:report": "react-scripts test --coverage --watchAll=false",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -47,6 +49,33 @@
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
+    ]
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.{js,jsx}",
+      "!src/**/*.d.ts",
+      "!src/index.js",
+      "!src/reportWebVitals.js",
+      "!src/serviceWorker.js",
+      "!src/**/setupTests.js",
+      "!src/mocks/**",
+      "!src/**/*.stories.{js,jsx}",
+      "!src/tests/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 70,
+        "functions": 70,
+        "lines": 70,
+        "statements": 70
+      }
+    },
+    "coverageReporters": [
+      "html",
+      "text",
+      "text-summary",
+      "lcov"
     ]
   }
 }
